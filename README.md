@@ -6,22 +6,24 @@ premium no estilo das centrais de veículos modernos: fundo grafite, o carro em 
 de destaque. Começa configurada para um **Jeep Compass Limited branco com teto
 preto e rodas aro 19**.
 
-![Tela larga 1920x720](docs/tela_10pol_1920x720_estudio_wide.png)
+![Modo claro](docs/tela_10pol_1920x720_estudio_dia_wide.png)
+
+![Modo escuro (farol aceso)](docs/tela_10pol_1920x720_estudio_noite_wide.png)
 
 | 9" 1024x600 | 10" 1280x720 | 15" vertical |
 |---|---|---|
-| ![](docs/tela_9pol_1024x600_estudio.png) | ![](docs/tela_10pol_1280x720_dunas_dia.png) | ![](docs/tela_15pol_vertical_1080x1920_dunas.png) |
+| ![](docs/tela_9pol_1024x600_estudio_dia.png) | ![](docs/tela_10pol_1280x720_dunas_dia.png) | ![](docs/tela_15pol_vertical_1080x1920_dunas.png) |
 
 > As imagens acima são geradas automaticamente no build (Paparazzi). Nelas o mapa
 > aparece simulado; no aparelho ele é o mapa real com GPS.
 
 ## Baixar e instalar
 
-1. Baixe o APK pronto: [`dist/AutoGlass-1.3.0.apk`](dist/AutoGlass-1.3.0.apk)
+1. Baixe o APK pronto: [`dist/AutoGlass-1.4.0.apk`](dist/AutoGlass-1.4.0.apk)
    (ou a versão mais nova na aba **Actions → Build APK → Artifacts**).
 2. Copie para um pendrive e abra pelo gerenciador de arquivos da central
    (permita "instalar apps de fontes desconhecidas"). Por cabo/Wi-Fi:
-   `adb install -r AutoGlass-1.3.0.apk`.
+   `adb install -r AutoGlass-1.4.0.apk`.
 3. Na primeira abertura o Android pergunta se o **AutoGlass deve ser o app de tela
    inicial padrão** — confirme. A partir daí ele é a tela principal: aparece ao ligar
    a central e ao tocar em Home. (Se não perguntar: *Configurações → Permissões e
@@ -48,7 +50,7 @@ outras centrais "Android Auto Radio").
 | **Barra de status** | Previsão do tempo (cidade, condição, máx/mín) e estado da conexão. |
 | **Palco do veículo** | O Compass com sombra de contato no piso e luz de destaque, sobre o ambiente escolhido: **Estúdio, Rua, Dunas, Estrada ou Lama**. Cada ambiente tem versão de **dia e de noite**, trocada automaticamente pelo nascer/pôr do sol; quando chove no local, aparece **chuva animada**; à noite o carro recebe uma luz mais fria. Relógio grande e data. |
 | **Painel ao vivo** | **Mapa** interativo com GPS (arrastar, pinça, centralizar), **YouTube** tocável dentro do painel ou um **Widget** de qualquer app (Google Maps, Spotify, rádio da central…). **Dois toques** abrem o app real em tela cheia (Waze/Google Maps, YouTube). Volte com o botão Home. |
-| **Cartão de música** | Mostra e controla o que estiver tocando (anterior, play/pause, próxima). A **barra de progresso pode ser tocada/arrastada** para avançar ou voltar. ▶ sem nada tocando retoma a última música; se não houver, abre o YouTube Music. Atalhos para **Rádio**, **Player da central** e apps de música. |
+| **Cartão de música** | Mostra e controla o que estiver tocando: Spotify, YouTube Music e também o **rádio e o player da central** (lidos pelas notificações e avisos de música desses apps). Mostra a **capa** — quando o app não fornece, busca automaticamente; o rádio ganha uma capa com a **frequência**. Barra de progresso arrastável; ▶ sem nada tocando retoma a última música ou abre o YouTube Music. |
 | **Dock** | Navegação, Música, Rádio, Telefone/Bluetooth e Vídeo (**toque longo** escolhe o app de cada botão), até **4 apps fixos** (ex.: Spotify, YouTube Music, Deezer, Prime Video) e acesso a todos os apps e às configurações. |
 
 O layout se adapta sozinho:
@@ -58,20 +60,26 @@ O layout se adapta sozinho:
 
 A escala é calculada pelo menor lado da tela, e em *Configurações → Tela* há um ajuste fino de 75% a 135%.
 
-## Girar o veículo
+## Girar o veículo (360°)
 
-Arraste o carro para os lados: ele gira com inércia e volta sozinho à posição depois
-de alguns segundos.
+O carro é um **modelo 3D do Compass Limited** (branco, teto preto, rodas aro 19, grade de
+7 fendas) renderizado em 60 posições. Arraste para os lados: ele gira 360° com inércia
+(frente, laterais e traseira) e volta sozinho à posição de exibição.
 
-![Giro](docs/giro_veiculo.png)
+![Giro 360°](docs/giro_360.png)
 
-- Com a foto padrão (uma única foto), o giro é um efeito 3D entre os dois lados do
-  carro (frente-esquerda ↔ frente-direita).
-- Para um **360° completo** (frente, lateral, traseira), use *Configurações → Veículo →
-  Fotos 360°* e selecione de 24 a 36 PNGs sem fundo, tirados ao redor do carro em
-  intervalos iguais e na ordem do giro. (Tire as fotos com o celular na mesma altura,
-  dando a volta no carro; o recorte do fundo pode ser feito com
-  `tools/finalize_vehicle.py` ou qualquer removedor de fundo.)
+Com o **farol aceso** (modo escuro) o modelo aparece com faróis e lanternas ligados.
+Também é possível usar suas próprias fotos 360° em *Configurações → Veículo → Fotos 360°*
+(24 a 36 PNGs sem fundo, na ordem do giro). O modelo é gerado por `tools/car3d_model.js`
+(three.js) e renderizado com `tools/car3d_render.js`.
+
+## Claro / escuro pelos faróis
+
+Padrão: **farol aceso = modo escuro, farol apagado = modo claro**. Como não há API padrão
+do Android para o fio de iluminação (ILL), o app procura o estado do farol em
+configurações do sistema usadas por fabricantes de centrais e no modo noite do Android
+(que muitas centrais ligam com o farol). Se a central não informar, usa o nascer/pôr do
+sol. A fonte detectada aparece em *Configurações → Ambiente do veículo*.
 
 ## Personalizar
 
@@ -137,10 +145,8 @@ tools/                     scripts que geraram a foto branca e os ambientes
 
 ## Créditos
 
-- Foto do veículo: "22 Jeep Compass Limited", por HJUdall, Wikimedia Commons,
-  **CC0 (domínio público)**. Recortada e repintada digitalmente em branco
-  (original vermelho, mesma versão Limited com teto preto e rodas aro 19),
-  com adesivos do para-brisa removidos, vidros levemente escurecidos, bordas do recorte refinadas e placa Mercosul sem caracteres. Scripts: `tools/recolor_vehicle.py` e `tools/finalize_vehicle.py`.
+- Veículo: modelo 3D estilizado do Compass Limited criado para o app (`tools/car3d_model.js`).
+- Capas automáticas: busca pública do iTunes.
   Script: `tools/recolor_vehicle.py`.
 - Ambientes Estúdio, Rua, Dunas, Estrada e Lama: gerados por `tools/generate_scenes.py`.
 - Mapas © OpenStreetMap contributors. Previsão: Open-Meteo.com (CC BY 4.0).

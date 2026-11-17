@@ -107,7 +107,7 @@ fun weatherIcon(w: Weather?): ImageVector = when (w?.code) {
 @Composable
 fun VehicleStage(
     vehicle: ImageBitmap?,
-    frames360: List<ImageBitmap>,
+    frames360: FrameSource?,
     sceneMode: SceneMode,
     vehicleName: String,
     vehicleTrim: String,
@@ -119,10 +119,10 @@ fun VehicleStage(
 ) {
     BoxWithConstraints(modifier) {
         val compact = maxHeight < 380.dp
-        val carAspect = vehicle?.let { it.width.toFloat() / it.height } ?: 1.75f
+        val carAspect = if (frames360 != null) 2.05f else vehicle?.let { it.width.toFloat() / it.height } ?: 1.75f
         val selectorSpace = if (compact) 44.dp else 56.dp
         val wideStage = maxWidth / maxHeight > 1.8f
-        val carW = minOf(maxWidth * (if (wideStage) 0.62f else 0.9f), (maxHeight - selectorSpace) * (if (wideStage) 0.80f else 0.68f) * carAspect)
+        val carW = minOf(maxWidth * (if (wideStage) 0.70f else 0.94f), (maxHeight - selectorSpace) * (if (wideStage) 0.86f else 0.74f) * carAspect)
         val carH = carW / carAspect
         // palco à direita: o texto fica no canto direito e o carro um pouco à esquerda dele
         val carShiftX = if (wideStage) -maxWidth * 0.10f else 0.dp
@@ -149,7 +149,7 @@ fun VehicleStage(
             )
         }
 
-        if (vehicle != null) {
+        if (vehicle != null || frames360 != null) {
             VehicleSpinner(
                 base = vehicle,
                 frames = frames360,
@@ -225,8 +225,8 @@ private fun VehicleName(vehicleName: String, vehicleTrim: String, compact: Boole
  */
 @Composable
 private fun VehicleSpinner(
-    base: ImageBitmap,
-    frames: List<ImageBitmap>,
+    base: ImageBitmap?,
+    frames: FrameSource?,
     night: Boolean,
     vehicleName: String,
     initialAngle: Float,
@@ -247,7 +247,7 @@ private fun VehicleSpinner(
         angle.animateTo(target, tween(1400, easing = FastOutSlowInEasing))
     }
 
-    val tint = ColorFilter.colorMatrix(ColorMatrix().apply {
+    val tint = if (frames != null) null else ColorFilter.colorMatrix(ColorMatrix().apply {
         if (night) setToScale(0.80f, 0.84f, 0.93f, 1f) else setToScale(1f, 1f, 1f, 1f)
     })
 
@@ -270,18 +270,17 @@ private fun VehicleSpinner(
         },
     ) {
         val a = angle.value
-        if (frames.size >= 8) {
-            val n = frames.size
-            val idx = ((((a % 360f) + 360f) % 360f) / 360f * n).toInt().coerceIn(0, n - 1)
-            Canvas(Modifier.fillMaxSize()) {
-                val w = size.width; val h = size.height
-                drawOval(
-                    Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent), center = Offset(w / 2, h * 0.93f), radius = w * 0.5f),
-                    topLeft = Offset(0f, h * 0.86f), size = Size(w, h * 0.14f),
-                )
+        if (frames != null && frames.count > 0) {
+            val n = frames.count
+            val idx = Math.floorMod((a / (360f / n)).roundToInt(), n)
+            var shown by remember(frames) { mutableStateOf(frames.cached(0)) }
+            LaunchedEffect(frames, idx) {
+                frames.frame(idx)?.let { shown = it }
+                // pré-carrega os vizinhos para o giro ficar fluido
+                for (d in 1..3) { frames.frame(idx + d); frames.frame(idx - d) }
             }
-            Image(frames[idx], vehicleName, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, colorFilter = tint)
-        } else {
+            shown?.let { Image(it, vehicleName, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+        } else if (base != null) {
             // posição no círculo: lado A (foto) em 0°, lado B (espelho) em 180°
             val norm = (((a + 180f) % 360f) + 360f) % 360f - 180f          // -180..180
             val sideB = abs(norm) > 90f

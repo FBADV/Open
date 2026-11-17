@@ -73,7 +73,9 @@ fun LauncherRoot(screen: MutableState<Screen>) {
     val weather by app.weather.weather.collectAsStateWithLifecycle()
 
     val customScene = settings.customScenes[settings.scene]
-    val isDay = rememberIsDay(settings.lighting, weather)
+    val headlights by app.headlights.state.collectAsStateWithLifecycle()
+    val isDay = rememberIsDay(settings.lighting, weather, headlights.on)
+    SideEffect { Glass.night = !isDay }
     val sceneBmp by produceState<android.graphics.Bitmap?>(null, settings.scene, customScene, isDay) {
         value = withContext(Dispatchers.IO) { Images.loadScene(context, settings.scene, customScene, isDay) }
     }
@@ -82,11 +84,15 @@ fun LauncherRoot(screen: MutableState<Screen>) {
         val src = sceneBmp ?: return@produceState
         value = withContext(Dispatchers.Default) { Images.blurred(src).asImageBitmap() }
     }
-    val frames360 by produceState<List<ImageBitmap>>(emptyList(), settings.vehicle360Version) {
-        value = withContext(Dispatchers.IO) { Images.load360(context).map { it.asImageBitmap() } }
+    // giro 360°: fotos importadas pelo usuário > foto própria (giro 2 lados) > modelo 3D embutido
+    val frames360 by produceState<FrameSource?>(null, settings.vehicle360Version, settings.customVehiclePath, isDay) {
+        value = withContext(Dispatchers.IO) {
+            FrameSource.fromFiles(Images.dir360(context))
+                ?: if (settings.customVehiclePath == null) FrameSource.fromAssets(context, if (isDay) "car360/day" else "car360/night") else null
+        }
     }
     val vehicle by produceState<ImageBitmap?>(null, settings.customVehiclePath) {
-        value = withContext(Dispatchers.IO) { Images.loadVehicle(context, settings.customVehiclePath)?.asImageBitmap() }
+        value = settings.customVehiclePath?.let { p -> withContext(Dispatchers.IO) { Images.loadVehicle(context, p)?.asImageBitmap() } }
     }
 
     // diálogos de escolha de app
@@ -283,7 +289,7 @@ fun Dashboard(
     settings: com.fbadv.autoglass.data.Settings,
     network: NetworkState,
     night: Boolean,
-    frames360: List<ImageBitmap> = emptyList(),
+    frames360: FrameSource? = null,
     vehicle: ImageBitmap?,
     weather: com.fbadv.autoglass.weather.Weather?,
     nowPlaying: com.fbadv.autoglass.media.NowPlaying?,

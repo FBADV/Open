@@ -58,17 +58,20 @@ fun rainIntensity(w: Weather?): Float = when (w?.code) {
 }
 
 /**
+ * Claro ou escuro. Padrão: pelos faróis (farol aceso = escuro).
  * Dia ou noite para escolher a versão do ambiente: usa o "é dia" da
  * previsão (nascer/pôr do sol reais) e, sem internet, o relógio (6h–18h).
  */
 @Composable
-fun rememberIsDay(mode: LightingMode, weather: Weather?): Boolean {
+fun rememberIsDay(mode: LightingMode, weather: Weather?, headlightsOn: Boolean? = null): Boolean {
     val hour by produceState(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
         while (true) { value = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); delay(60_000) }
     }
     return when (mode) {
         LightingMode.DIA -> true
         LightingMode.NOITE -> false
-        LightingMode.AUTO -> weather?.isDay ?: (hour in 6..17)
+        LightingMode.SOL -> weather?.isDay ?: (hour in 6..17)
+        // farol aceso = modo escuro; apagado = claro; sem informação da central, usa o sol
+        LightingMode.FAROL -> headlightsOn?.let { !it } ?: (weather?.isDay ?: (hour in 6..17))
     }
 }

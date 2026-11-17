@@ -53,6 +53,12 @@ object Glass {
         set(v) { accentState.value = v }
     val accentSoft: Color get() = accent.copy(alpha = 0.16f)
 
+    private val nightState = mutableStateOf(false)
+    /** Modo escuro (farol aceso): painéis um pouco mais claros que o fundo para destacar. */
+    var night: Boolean
+        get() = nightState.value
+        set(v) { nightState.value = v }
+
     /** Sombra suave para textos sobre o ambiente (legível em fundos claros). */
     val textShadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 1f), 10f)
 
@@ -98,8 +104,14 @@ fun Modifier.glass(
                     filterQuality = FilterQuality.Low,
                 )
             }
-            // fumê escuro
-            drawRect(Color(0xFF07090C).copy(alpha = (0.62f / strength.coerceAtLeast(0.6f)).coerceIn(0.35f, 0.8f)))
+            if (Glass.night) {
+                // escuro: vidro grafite claro, destacado do fundo noturno
+                drawRect(Color(0xFF1C2129).copy(alpha = 0.80f))
+                drawRect(Color.White.copy(alpha = 0.035f))
+            } else {
+                // claro: fumê escuro sobre o fundo claro
+                drawRect(Color(0xFF07090C).copy(alpha = (0.62f / strength.coerceAtLeast(0.6f)).coerceIn(0.35f, 0.8f)))
+            }
             drawRect(
                 Brush.verticalGradient(
                     0f to Color.White.copy(alpha = 0.055f * strength),
@@ -111,9 +123,9 @@ fun Modifier.glass(
     if (!border) base else base.border(
         width = 1.dp,
         brush = Brush.verticalGradient(
-            0f to Color.White.copy(alpha = 0.16f),
-            0.4f to Color.White.copy(alpha = 0.06f),
-            1f to Color.White.copy(alpha = 0.03f),
+            0f to Color.White.copy(alpha = if (Glass.night) 0.28f else 0.16f),
+            0.4f to Color.White.copy(alpha = if (Glass.night) 0.12f else 0.06f),
+            1f to Color.White.copy(alpha = if (Glass.night) 0.08f else 0.03f),
         ),
         shape = shape,
     )

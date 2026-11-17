@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.fbadv.autoglass.data.AppEntry
 import com.fbadv.autoglass.media.NowPlaying
 import com.fbadv.autoglass.ui.theme.Glass
@@ -102,7 +103,11 @@ fun MediaCard(
         Column(Modifier.fillMaxSize().padding(if (compact) 14.dp else 18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (nowPlaying?.isPlaying == true) "TOCANDO AGORA" else "MÍDIA",
+                    when {
+                        nowPlaying?.isRadio == true -> "RÁDIO"
+                        nowPlaying?.isPlaying == true -> "TOCANDO AGORA"
+                        else -> "MÍDIA"
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = Glass.textFaint,
                     modifier = Modifier.weight(1f),
@@ -119,8 +124,12 @@ fun MediaCard(
                         .clickable { nowPlaying?.let { onOpenSource(it.packageName) } },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    else Icon(Icons.Outlined.MusicNote, null, tint = Glass.textFaint, modifier = Modifier.size(artSize * 0.4f))
+                    when {
+                        art != null -> Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        nowPlaying?.isRadio == true -> RadioCover(nowPlaying)
+                        nowPlaying != null -> GeneratedCover(nowPlaying)
+                        else -> Icon(Icons.Outlined.MusicNote, null, tint = Glass.textFaint, modifier = Modifier.size(artSize * 0.4f))
+                    }
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
@@ -255,5 +264,52 @@ private fun MediaAccessDialog(onOpenAccess: () -> Unit, onOpenAppInfo: () -> Uni
                 GlassChip("Acesso a notificações", selected = true, onClick = onOpenAccess)
             }
         }
+    }
+}
+
+private val FREQ = Regex("""(\d{2,3}[.,]\d{1,2})\s*(mhz)?|(\d{3,4})\s*khz""", RegexOption.IGNORE_CASE)
+
+/** Capa do rádio: frequência em destaque (rádios não têm capa de álbum). */
+@Composable
+private fun RadioCover(np: NowPlaying) {
+    val m = FREQ.find(np.title) ?: FREQ.find(np.artist)
+    val freq = m?.groupValues?.get(1)?.ifBlank { null }?.replace(',', '.') ?: m?.groupValues?.get(3)
+    val band = if (m?.groupValues?.get(3)?.isNotBlank() == true) "AM" else "FM"
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Glass.accent.copy(alpha = 0.55f), Color(0xFF10141B)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        val maxWidth = this.maxWidth
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Outlined.Radio, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(maxWidth * 0.22f))
+            Text(
+                freq ?: band,
+                color = Color.White,
+                fontSize = (maxWidth.value * 0.24f).sp,
+                fontWeight = FontWeight.Light,
+                maxLines = 1,
+            )
+            if (freq != null) Text(band, color = Color.White.copy(alpha = 0.7f), fontSize = (maxWidth.value * 0.10f).sp, letterSpacing = 2.sp)
+        }
+    }
+}
+
+/** Capa gerada (enquanto a capa real é buscada ou quando não existe). */
+@Composable
+private fun GeneratedCover(np: NowPlaying) {
+    val hue = ((np.title + np.artist).hashCode() and 0xFFFF) % 360
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(
+            Brush.linearGradient(listOf(Color.hsv(hue.toFloat(), 0.45f, 0.55f), Color.hsv(((hue + 40) % 360).toFloat(), 0.55f, 0.18f))),
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        val maxWidth = this.maxWidth
+        Text(
+            np.title.trim().take(1).uppercase().ifBlank { "♪" },
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = (maxWidth.value * 0.42f).sp,
+            fontWeight = FontWeight.Thin,
+        )
     }
 }

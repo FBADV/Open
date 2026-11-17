@@ -17,6 +17,7 @@ import android.view.KeyEvent
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,11 @@ data class NowPlaying(
     val positionMs: Long,
     val positionUpdatedAt: Long,
     val speed: Float,
+    /** Rádio (sem capa de álbum: o cartão mostra a frequência). */
+    val isRadio: Boolean = false,
+    /** Veio de notificação/aviso (sem sessão): comandos vão como teclas de mídia. */
+    val fromFallback: Boolean = false,
+    val updatedAt: Long = SystemClock.elapsedRealtime(),
 ) {
     fun currentPosition(now: Long = SystemClock.elapsedRealtime()): Long {
         if (!isPlaying) return positionMs
@@ -58,6 +64,137 @@ class MediaRepository(private val context: Context) {
 
     private var controller: MediaController? = null
     private var listening = false
+    /** Últimos dados vindos de notificação/aviso de rádio ou player sem sessão. */
+    private var fallback: NowPlaying? = null
+    private var sessionNow: NowPlaying? = null
+    private val io = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    init {
+        // avisos de "música mudou" usados por players nativos e de centrais
+        val f = android.content.IntentFilter()
+        listOf(
+            "com.android.music.metachanged", "com.android.music.playstatechanged",
+            "com.android.music.playbackcomplete", "com.htc.music.metachanged",
+            "com.sec.android.app.music.metachanged", "com.miui.player.metachanged",
+            "com.andrew.apollo.metachanged", "com.syu.music.metachanged",
+            "com.microntek.music.metachanged", "com.ts.music.metachanged",
+            "fm.last.android.metachanged", "com.real.IMP.metachanged",
+        ).forEach { f.addAction(it) }
+        androidx.core.content.ContextCompat.registerReceiver(context, object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) = onMetaBroadcast(i)
+        }, f, androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
+    }
+
+    private fun isRadioPackage(pkg: String): Boolean {
+        val app = runCatching { com.fbadv.autoglass.AutoGlassApp.instance }.getOrNull()
+        val chosen = app?.settings?.value?.roles?.get(com.fbadv.autoglass.data.AppRole.RADIO)?.substringBefore('/')
+        return pkg == chosen || pkg in com.fbadv.autoglass.data.KnownApps.RADIO ||
+            Regex("radio|fmradio|\\.fm\\b|tuner", RegexOption.IGNORE_CASE).containsMatchIn(pkg)
+    }
+
+    private fun isPlayerPackage(pkg: String): Boolean {
+        val app = runCatching { com.fbadv.autoglass.AutoGlassApp.instance }.getOrNull()
+        val chosen = app?.settings?.value?.roles?.get(com.fbadv.autoglass.data.AppRole.PLAYER)?.substringBefore('/')
+        return pkg == chosen || pkg in com.fbadv.autoglass.data.KnownApps.PLAYER
+    }
+
+    /** Notificação postada/removida (chamado pelo serviço de notificações). */
+    fun onNotification(sbn: android.service.notification.StatusBarNotification, posted: Boolean) {
+        val pkg = sbn.packageName ?: return
+        if (pkg == context.packageName) return
+        val n = sbn.notification ?: return
+        val extras = n.extras
+        if (!posted) {
+            if (fallback?.packageName == pkg) { fallback = null; publishCombined() }
+            return
+        }
+        // se a notificação traz o token da sessão, controla o app diretamente
+        val token: android.media.session.MediaSession.Token? = runCatching {
+            @Suppress("DEPRECATION") extras.getParcelable<android.media.session.MediaSession.Token>(android.app.Notification.EXTRA_MEDIA_SESSION)
+        }.getOrNull()
+        if (token != null) {
+            if (controller?.sessionToken != token) {
+                runCatching {
+                    val c = MediaController(context, token)
+                    if (controller == null || controller?.playbackState?.state != PlaybackState.STATE_PLAYING ||
+                        c.playbackState?.state == PlaybackState.STATE_PLAYING) {
+                        controller?.unregisterCallback(callback)
+                        controller = c
+                        c.registerCallback(callback, main)
+                    }
+                }
+            }
+            publish(); return
+        }
+        val template = extras.getString(android.app.Notification.EXTRA_TEMPLATE).orEmpty()
+        val mediaLike = isRadioPackage(pkg) || isPlayerPackage(pkg) ||
+            n.category == android.app.Notification.CATEGORY_TRANSPORT || template.contains("MediaStyle")
+        if (!mediaLike) return
+        val title = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val text = (extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
+            ?: extras.getCharSequence(android.app.Notification.EXTRA_SUB_TEXT))?.toString().orEmpty()
+        if (title.isBlank() && text.isBlank()) return
+        val large: Bitmap? = runCatching {
+            (extras.get(android.app.Notification.EXTRA_LARGE_ICON) as? Bitmap)
+                ?: (extras.get(android.app.Notification.EXTRA_LARGE_ICON) as? android.graphics.drawable.Icon)
+                    ?.loadDrawable(context)?.let { d -> d.toBitmap(300, 300) }
+        }.getOrNull()
+        val ongoing = (n.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0
+        fallback = NowPlaying(
+            packageName = pkg, title = title, artist = text, album = "",
+            art = large?.let { runCatching { it.asImageBitmap() }.getOrNull() },
+            isPlaying = ongoing || isRadioPackage(pkg), durationMs = 0, positionMs = 0,
+            positionUpdatedAt = SystemClock.elapsedRealtime(), speed = 1f,
+            isRadio = isRadioPackage(pkg), fromFallback = true,
+        )
+        publishCombined()
+    }
+
+    private fun onMetaBroadcast(i: Intent) {
+        val title = i.getStringExtra("track") ?: i.getStringExtra("title") ?: return
+        val artist = i.getStringExtra("artist").orEmpty()
+        val playing = if (i.hasExtra("playing")) i.getBooleanExtra("playing", true) else true
+        val pkg = i.getStringExtra("package") ?: i.action?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: "player"
+        fallback = NowPlaying(
+            packageName = pkg, title = title, artist = artist, album = i.getStringExtra("album").orEmpty(), art = null,
+            isPlaying = playing, durationMs = i.getLongExtra("duration", 0L), positionMs = i.getLongExtra("position", 0L),
+            positionUpdatedAt = SystemClock.elapsedRealtime(), speed = 1f, isRadio = isRadioPackage(pkg), fromFallback = true,
+        )
+        publishCombined()
+    }
+
+    /** Escolhe o que mostrar: a sessão que toca; senão o rádio/player de fábrica. */
+    private fun publishCombined() {
+        val s = sessionNow
+        val f = fallback
+        val chosen = when {
+            s != null && s.isPlaying -> s
+            f != null && (f.isPlaying || s == null) -> f
+            else -> s ?: f
+        }
+        if (chosen != null && chosen.art == null && chosen.title.isNotBlank()) enrichArtwork(chosen)
+        _nowPlaying.value = chosen
+    }
+
+    /** Capa automática para músicas sem capa (player da central e rádio com RDS "Artista - Música"). */
+    private fun enrichArtwork(np: NowPlaying) {
+        var artist = np.artist; var title = np.title
+        if (np.isRadio) {
+            val rds = listOf(np.artist, np.title).firstOrNull { it.contains(" - ") } ?: return
+            artist = rds.substringBefore(" - "); title = rds.substringAfter(" - ")
+        }
+        io.execute {
+            val bmp = ArtworkFetcher.lookup(artist, title) ?: return@execute
+            main.post {
+                val cur = _nowPlaying.value
+                if (cur != null && cur.title == np.title && cur.packageName == np.packageName && cur.art == null) {
+                    val withArt = cur.copy(art = bmp.asImageBitmap())
+                    if (cur.fromFallback) fallback = withArt else sessionNow = withArt
+                    _nowPlaying.value = withArt
+                }
+            }
+        }
+    }
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { list ->
         pickController(list.orEmpty())
@@ -114,7 +251,8 @@ class MediaRepository(private val context: Context) {
     private fun publish() {
         val c = controller
         if (c == null) {
-            _nowPlaying.value = null
+            sessionNow = null
+            publishCombined()
             return
         }
         val md = c.metadata
@@ -122,8 +260,8 @@ class MediaRepository(private val context: Context) {
         val art: Bitmap? = md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: md?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-        val previous = _nowPlaying.value
-        _nowPlaying.value = NowPlaying(
+        val previous = sessionNow
+        sessionNow = NowPlaying(
             packageName = c.packageName,
             title = md?.getString(MediaMetadata.METADATA_KEY_TITLE)
                 ?: md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE).orEmpty(),
@@ -142,7 +280,9 @@ class MediaRepository(private val context: Context) {
             positionMs = st?.position ?: 0L,
             positionUpdatedAt = st?.lastPositionUpdateTime?.takeIf { it > 0 } ?: SystemClock.elapsedRealtime(),
             speed = st?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
+            isRadio = isRadioPackage(c.packageName),
         )
+        publishCombined()
     }
 
     /**
@@ -150,8 +290,12 @@ class MediaRepository(private val context: Context) {
      * envia "play" (o Android retoma o último app de música) e, se nada
      * começar a tocar, abre o app de música escolhido (YouTube Music).
      */
+    /** Se o que aparece é o rádio/player sem sessão, comanda por teclas de mídia. */
+    private val showingFallback get() = _nowPlaying.value?.fromFallback == true
+
     fun playPause() {
-        val c = controller
+        val c = if (showingFallback) null else controller
+        if (showingFallback) { sendKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE); return }
         if (c != null) {
             val playing = c.playbackState?.state == PlaybackState.STATE_PLAYING ||
                 c.playbackState?.state == PlaybackState.STATE_BUFFERING
@@ -167,12 +311,12 @@ class MediaRepository(private val context: Context) {
     }
 
     fun next() {
-        val c = controller ?: return sendKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+        val c = (if (showingFallback) null else controller) ?: return sendKey(KeyEvent.KEYCODE_MEDIA_NEXT)
         command(c, PlaybackState.ACTION_SKIP_TO_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT) { it.skipToNext() }
     }
 
     fun previous() {
-        val c = controller ?: return sendKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+        val c = (if (showingFallback) null else controller) ?: return sendKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
         command(c, PlaybackState.ACTION_SKIP_TO_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS) { it.skipToPrevious() }
     }
 

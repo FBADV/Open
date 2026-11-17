@@ -17,9 +17,10 @@ enum class SceneMode(val label: String, val key: String) {
 
 /** Iluminação do ambiente: segue o dia/noite real ou fica fixa. */
 enum class LightingMode(val label: String) {
-    AUTO("Automática"),
-    DIA("Sempre dia"),
-    NOITE("Sempre noite"),
+    FAROL("Faróis"),
+    SOL("Nascer/pôr do sol"),
+    DIA("Sempre claro"),
+    NOITE("Sempre escuro"),
 }
 
 /** Cor de destaque da interface (o restante é grafite/preto). */
@@ -50,7 +51,7 @@ enum class AppRole(val label: String, val key: String) {
 data class Settings(
     val scene: SceneMode = SceneMode.ESTUDIO,
     val accent: AccentTheme = AccentTheme.GELO,
-    val lighting: LightingMode = LightingMode.AUTO,
+    val lighting: LightingMode = LightingMode.FAROL,
     val rainEffect: Boolean = true,
     val autoStart: Boolean = true,
     val favorites: List<String> = emptyList(),

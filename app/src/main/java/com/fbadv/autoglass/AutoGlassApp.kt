@@ -15,6 +15,7 @@ class AutoGlassApp : Application() {
     lateinit var media: MediaRepository
     lateinit var weather: WeatherRepository
     lateinit var widgets: WidgetHostManager
+    lateinit var headlights: com.fbadv.autoglass.vehicle.HeadlightDetector
 
     override fun onCreate() {
         super.onCreate()
@@ -29,6 +30,7 @@ class AutoGlassApp : Application() {
         media = MediaRepository(this)
         weather = WeatherRepository(this)
         widgets = WidgetHostManager(this)
+        headlights = com.fbadv.autoglass.vehicle.HeadlightDetector(this)
     }
 
     companion object {

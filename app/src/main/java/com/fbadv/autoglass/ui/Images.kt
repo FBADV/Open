@@ -25,7 +25,8 @@ object Images {
         customPath?.let { decodeFile(it, 1920) } ?: decodeRes(context, sceneRes(mode, day), 1920)
 
     fun loadVehicle(context: Context, customPath: String?): Bitmap? =
-        customPath?.let { decodeFile(it, 1400) } ?: decodeRes(context, R.drawable.vehicle_compass_limited, 1400)
+        customPath?.let { decodeFile(it, 1400) }
+            ?: runCatching { context.assets.open("car360/day/00.webp").use { BitmapFactory.decodeStream(it) } }.getOrNull()
 
     private fun decodeRes(context: Context, res: Int, maxW: Int): Bitmap? = runCatching {
         val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }

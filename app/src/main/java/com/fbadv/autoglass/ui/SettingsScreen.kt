@@ -38,6 +38,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -126,13 +127,13 @@ fun SettingsScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 GlassChip("Usar foto do meu veículo", Icons.Outlined.Image, selected = true) { pickVehicle.launch("image/*") }
                                 if (settings.customVehiclePath != null) {
-                                    GlassChip("Voltar ao Compass Limited", Icons.Outlined.Restore) {
+                                    GlassChip("Voltar ao Compass 3D", Icons.Outlined.Restore) {
                                         store.update { it.copy(customVehiclePath = null, vehicleName = "Compass", vehicleTrim = "Limited") }
                                     }
                                 }
                             }
                             Text(
-                                "Dica: use um PNG com fundo transparente, carro de lado/¾ de frente.",
+                                "Padrão: modelo 3D do Compass Limited (branco, teto preto, aro 19) com giro 360°. Foto própria: PNG sem fundo, ¾ de frente.",
                                 color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -177,9 +178,15 @@ fun SettingsScreen(
                             GlassChip(m.label, selected = settings.lighting == m) { store.update { it.copy(lighting = m) } }
                         }
                     }
+                    val hl by app.headlights.state.collectAsState()
                     Text(
-                        "Automática: versão de dia ou de noite de cada ambiente conforme o nascer e o pôr do sol; o carro recebe a luz do ambiente.",
+                        "Faróis: farol aceso = modo escuro (o carro aparece com os faróis ligados); farol apagado = modo claro. " +
+                            "Se a central não informar o farol, usa o nascer/pôr do sol.",
                         color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "Detecção do farol: " + hl.source + (hl.on?.let { if (it) " — ACESO" else " — APAGADO" } ?: ""),
+                        color = Glass.textDim, style = MaterialTheme.typography.bodyMedium,
                     )
                     SettingSwitch("Efeito de chuva", "Chuva animada sobre o ambiente quando estiver chovendo no local", settings.rainEffect) { v ->
                         store.update { it.copy(rainEffect = v) }
@@ -291,10 +298,9 @@ fun SettingsScreen(
             }
             item {
                 Section("Sobre") {
-                    Text("AutoGlass Launcher 1.3", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Text("AutoGlass Launcher 1.4", color = Glass.text, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Foto do veículo: “22 Jeep Compass Limited” por HJUdall, Wikimedia Commons, CC0 (domínio público) — " +
-                            "recortada e repintada em branco. Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
+                        "Veículo: modelo 3D estilizado do Compass Limited criado para o app (tools/car3d_model.js). Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
                             "Mapas © OpenStreetMap (sem chave de API). Tempo: Open-Meteo.com (CC BY 4.0). " +
                             "Jeep e Compass são marcas de seus respectivos donos; app pessoal sem vínculo com a fabricante.",
                         color = Glass.textDim,

@@ -42,13 +42,14 @@ class LauncherScreenshotTest(private val case: Case) {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases() = listOf(
-            Case("9pol_1024x600_estudio", 1024, 600, SceneMode.ESTUDIO),
+            Case("9pol_1024x600_estudio_dia", 1024, 600, SceneMode.ESTUDIO, day = true),
             Case("10pol_1280x720_dunas_dia", 1280, 720, SceneMode.DUNAS, day = true),
             Case("10pol_1920x720_rua_wide", 1920, 720, SceneMode.RUA),
             Case("12pol_1920x1080_lama", 1920, 1080, SceneMode.LAMA, LivePanelMode.VIDEO),
             Case("13pol_2000x1200_estrada_dia", 2000, 1200, SceneMode.ESTRADA, day = true),
             Case("10pol_1280x720_estudio_dia", 1280, 720, SceneMode.ESTUDIO, day = true),
-            Case("10pol_1920x720_estudio_wide", 1920, 720, SceneMode.ESTUDIO),
+            Case("10pol_1920x720_estudio_dia_wide", 1920, 720, SceneMode.ESTUDIO, day = true),
+            Case("10pol_1920x720_estudio_noite_wide", 1920, 720, SceneMode.ESTUDIO),
             Case("15pol_vertical_1080x1920_dunas", 1080, 1920, SceneMode.DUNAS),
         )
     }
@@ -72,7 +73,9 @@ class LauncherScreenshotTest(private val case: Case) {
     fun dashboard() {
         val res = paparazzi.context.resources
         val sceneBmp = BitmapFactory.decodeResource(res, Images.sceneRes(case.scene, case.day))
-        val vehicle = BitmapFactory.decodeResource(res, R.drawable.vehicle_compass_limited).asImageBitmap()
+        val folder = java.io.File("src/main/assets/car360/" + (if (case.day) "day" else "night"))
+        val frames = com.fbadv.autoglass.ui.FrameSource(folder.listFiles()!!.sortedBy { it.name }.map { it.readBytes() })
+        kotlinx.coroutines.runBlocking { frames.frame(0) }
         val blurred = Images.blurred(sceneBmp).asImageBitmap()
         val fav = listOf(
             AppEntry("Spotify", "com.spotify.music", "a"),
@@ -80,6 +83,7 @@ class LauncherScreenshotTest(private val case: Case) {
             AppEntry("Waze", "com.waze", "c"),
             null,
         )
+        com.fbadv.autoglass.ui.theme.Glass.night = !case.day
         paparazzi.snapshot {
             CompositionLocalProvider(LocalInspectionMode provides true) {
             AutoGlassTheme {
@@ -88,7 +92,8 @@ class LauncherScreenshotTest(private val case: Case) {
                         settings = Settings(scene = case.scene, livePanel = case.live),
                         network = NetworkState.WIFI,
                         night = !case.day,
-                        vehicle = vehicle,
+                        vehicle = null,
+                        frames360 = frames,
                         weather = Weather("Natal", 29.4, 31.0, 24.0, 1, true),
                         nowPlaying = NowPlaying(
                             "com.spotify.music", "Estrada Afora", "Trilha AutoGlass", "", null,
