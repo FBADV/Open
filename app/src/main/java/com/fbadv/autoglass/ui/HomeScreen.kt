@@ -82,6 +82,9 @@ fun LauncherRoot(screen: MutableState<Screen>) {
         val src = sceneBmp ?: return@produceState
         value = withContext(Dispatchers.Default) { Images.blurred(src).asImageBitmap() }
     }
+    val frames360 by produceState<List<ImageBitmap>>(emptyList(), settings.vehicle360Version) {
+        value = withContext(Dispatchers.IO) { Images.load360(context).map { it.asImageBitmap() } }
+    }
     val vehicle by produceState<ImageBitmap?>(null, settings.customVehiclePath) {
         value = withContext(Dispatchers.IO) { Images.loadVehicle(context, settings.customVehiclePath)?.asImageBitmap() }
     }
@@ -99,6 +102,11 @@ fun LauncherRoot(screen: MutableState<Screen>) {
     fun openRole(role: AppRole, bounds: Rect? = null) {
         val e = app.apps.resolveRole(role, settings.roles[role])
         if (e != null) open(e, bounds) else pickRole = role
+    }
+    // "play" sem nada para retomar: abre o app de música escolhido (YouTube Music)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        app.media.onNothingToPlay = { openRole(AppRole.MUSIC) }
+        onDispose { app.media.onNothingToPlay = null }
     }
 
     val favorites = remember(settings.favorites, apps) {
@@ -121,7 +129,12 @@ fun LauncherRoot(screen: MutableState<Screen>) {
             app.widgets.info(app.settings.value.widgetId)?.provider?.packageName?.let { AppLauncher.launchPackage(context, it) }
         },
         openPackage = { pkg -> AppLauncher.launchPackage(context, pkg) },
-        grantMediaAccess = { AppLauncher.start(context, app.media.accessSettingsIntent()) },
+        grantMediaAccess = {
+            val direct = app.media.directAccessIntent()
+            if (direct == null || !AppLauncher.start(context, direct)) AppLauncher.start(context, app.media.accessSettingsIntent())
+        },
+        openAppInfo = { AppLauncher.start(context, app.media.appInfoIntent()) },
+        seek = { app.media.seekTo(it) },
         previous = { app.media.previous() },
         playPause = { app.media.playPause() },
         next = { app.media.next() },
@@ -142,6 +155,7 @@ fun LauncherRoot(screen: MutableState<Screen>) {
                             settings = settings,
                             network = network,
                             night = !isDay,
+                            frames360 = frames360,
                             vehicle = vehicle,
                             weather = weather,
                             nowPlaying = nowPlaying,
@@ -229,7 +243,7 @@ fun LauncherSurface(
                 )
                 Box(
                     Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(0f to Color(0x8C050608), 0.32f to Color(0x1A050608), 0.55f to Color.Transparent, 1f to Color(0x99050608)),
+                        Brush.horizontalGradient(0f to Color(0x99050608), 0.45f to Color(0x1A050608), 0.7f to Color.Transparent, 1f to Color(0x8C050608)),
                     ),
                 )
                 if (rain > 0f) RainOverlay(rain)
@@ -252,13 +266,15 @@ class DashboardActions(
     val openWidgetApp: () -> Unit,
     val openPackage: (String) -> Unit,
     val grantMediaAccess: () -> Unit,
+    val openAppInfo: () -> Unit,
+    val seek: (Long) -> Unit,
     val previous: () -> Unit,
     val playPause: () -> Unit,
     val next: () -> Unit,
     val goTo: (Screen) -> Unit,
 ) {
     companion object {
-        val NONE = DashboardActions({}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+        val NONE = DashboardActions({}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }
 
@@ -267,6 +283,7 @@ fun Dashboard(
     settings: com.fbadv.autoglass.data.Settings,
     network: NetworkState,
     night: Boolean,
+    frames360: List<ImageBitmap> = emptyList(),
     vehicle: ImageBitmap?,
     weather: com.fbadv.autoglass.weather.Weather?,
     nowPlaying: com.fbadv.autoglass.media.NowPlaying?,
@@ -290,6 +307,7 @@ fun Dashboard(
     val stage: @Composable (Modifier) -> Unit = { m ->
         VehicleStage(
             vehicle = vehicle,
+            frames360 = frames360,
             sceneMode = settings.scene,
             vehicleName = settings.vehicleName,
             vehicleTrim = settings.vehicleTrim,
@@ -327,6 +345,8 @@ fun Dashboard(
             onOpenApp = actions.openApp,
             onOpenSource = actions.openPackage,
             onGrantAccess = actions.grantMediaAccess,
+            onOpenAppInfo = actions.openAppInfo,
+            onSeek = actions.seek,
             onPrevious = actions.previous,
             onPlayPause = actions.playPause,
             onNext = actions.next,
@@ -351,12 +371,13 @@ fun Dashboard(
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
             StatusBar(weather, network, Modifier.fillMaxWidth().height(28.dp))
             when {
+                // paisagem: mapa e player à esquerda, veículo à direita
                 aspect >= 1.15f -> Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    stage(Modifier.weight(if (aspect >= 1.95f) 1.45f else 1.1f).fillMaxHeight())
                     Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                         live(Modifier.weight(1.2f).fillMaxWidth())
                         media(Modifier.weight(1f).fillMaxWidth())
                     }
+                    stage(Modifier.weight(if (aspect >= 1.95f) 1.45f else 1.1f).fillMaxHeight())
                 }
                 else -> Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
                     stage(Modifier.weight(1.05f).fillMaxWidth())

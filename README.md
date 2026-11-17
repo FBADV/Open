@@ -17,11 +17,11 @@ preto e rodas aro 19**.
 
 ## Baixar e instalar
 
-1. Baixe o APK pronto: [`dist/AutoGlass-1.2.0.apk`](dist/AutoGlass-1.2.0.apk)
+1. Baixe o APK pronto: [`dist/AutoGlass-1.3.0.apk`](dist/AutoGlass-1.3.0.apk)
    (ou a versão mais nova na aba **Actions → Build APK → Artifacts**).
 2. Copie para um pendrive e abra pelo gerenciador de arquivos da central
    (permita "instalar apps de fontes desconhecidas"). Por cabo/Wi-Fi:
-   `adb install -r AutoGlass-1.2.0.apk`.
+   `adb install -r AutoGlass-1.3.0.apk`.
 3. Na primeira abertura o Android pergunta se o **AutoGlass deve ser o app de tela
    inicial padrão** — confirme. A partir daí ele é a tela principal: aparece ao ligar
    a central e ao tocar em Home. (Se não perguntar: *Configurações → Permissões e
@@ -29,8 +29,12 @@ preto e rodas aro 19**.
    *Configurações de fábrica*.)
 4. Na primeira abertura, conceda:
    - **Localização**: mapa, GPS e previsão do tempo;
-   - **Acesso às mídias** (botão *Permitir* no cartão de música): mostra música,
-     capa e progresso do Spotify, YouTube Music, Deezer, Amazon Music, rádio etc.;
+   - **Acesso às mídias** (botão *Permitir controle* no cartão de música): sem ele o
+     Android não deixa o launcher comandar Spotify/YouTube Music — os botões viram
+     "teclas de mídia", que muitas centrais desviam para o player de fábrica.
+     No **Android 13+** apps instalados por APK têm essa opção bloqueada: antes, abra
+     *Informações do app → menu ⋮ → Permitir configurações restritas*, depois
+     *Acesso a notificações → AutoGlass*. O próprio cartão mostra esse passo a passo;
    - **Sobrepor a outros apps**: permite abrir o AutoGlass sozinho quando a central
      liga ou acorda (Android 10+) e o botão Home flutuante.
 
@@ -44,15 +48,30 @@ outras centrais "Android Auto Radio").
 | **Barra de status** | Previsão do tempo (cidade, condição, máx/mín) e estado da conexão. |
 | **Palco do veículo** | O Compass com sombra de contato no piso e luz de destaque, sobre o ambiente escolhido: **Estúdio, Rua, Dunas, Estrada ou Lama**. Cada ambiente tem versão de **dia e de noite**, trocada automaticamente pelo nascer/pôr do sol; quando chove no local, aparece **chuva animada**; à noite o carro recebe uma luz mais fria. Relógio grande e data. |
 | **Painel ao vivo** | **Mapa** interativo com GPS (arrastar, pinça, centralizar), **YouTube** tocável dentro do painel ou um **Widget** de qualquer app (Google Maps, Spotify, rádio da central…). **Dois toques** abrem o app real em tela cheia (Waze/Google Maps, YouTube). Volte com o botão Home. |
-| **Cartão de música** | Mostra e controla o que estiver tocando (anterior, play/pause, próxima, progresso). Atalhos para **Rádio** e **Player da central** e para os apps de música instalados. |
+| **Cartão de música** | Mostra e controla o que estiver tocando (anterior, play/pause, próxima). A **barra de progresso pode ser tocada/arrastada** para avançar ou voltar. ▶ sem nada tocando retoma a última música; se não houver, abre o YouTube Music. Atalhos para **Rádio**, **Player da central** e apps de música. |
 | **Dock** | Navegação, Música, Rádio, Telefone/Bluetooth e Vídeo (**toque longo** escolhe o app de cada botão), até **4 apps fixos** (ex.: Spotify, YouTube Music, Deezer, Prime Video) e acesso a todos os apps e às configurações. |
 
 O layout se adapta sozinho:
 
-- paisagem (1024x600, 1280x720, 1920x720, 1920x1080, 2000x1200): palco à esquerda, mapa e mídia à direita;
+- paisagem (1024x600, 1280x720, 1920x720, 1920x1080, 2000x1200): mapa e mídia à esquerda, veículo e relógio à direita;
 - telas em pé (estilo Tesla): palco, mapa e mídia empilhados.
 
 A escala é calculada pelo menor lado da tela, e em *Configurações → Tela* há um ajuste fino de 75% a 135%.
+
+## Girar o veículo
+
+Arraste o carro para os lados: ele gira com inércia e volta sozinho à posição depois
+de alguns segundos.
+
+![Giro](docs/giro_veiculo.png)
+
+- Com a foto padrão (uma única foto), o giro é um efeito 3D entre os dois lados do
+  carro (frente-esquerda ↔ frente-direita).
+- Para um **360° completo** (frente, lateral, traseira), use *Configurações → Veículo →
+  Fotos 360°* e selecione de 24 a 36 PNGs sem fundo, tirados ao redor do carro em
+  intervalos iguais e na ordem do giro. (Tire as fotos com o celular na mesma altura,
+  dando a volta no carro; o recorte do fundo pode ser feito com
+  `tools/finalize_vehicle.py` ou qualquer removedor de fundo.)
 
 ## Personalizar
 

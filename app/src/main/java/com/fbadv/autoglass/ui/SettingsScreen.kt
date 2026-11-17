@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.ScreenRotationAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -90,6 +91,13 @@ fun SettingsScreen(
         val path = Images.import(context, uri, "vehicle_custom_${System.currentTimeMillis()}.png")
         if (path != null) store.update { it.copy(customVehiclePath = path) }
     }
+    val pick360 = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNotEmpty()) {
+            Images.import360(context, uris)
+            store.update { it.copy(vehicle360Version = it.vehicle360Version + 1) }
+        }
+    }
+    val count360 = remember(settings.vehicle360Version) { Images.dir360(context).listFiles()?.size ?: 0 }
     val pickScene = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         val target = importTarget ?: return@rememberLauncherForActivityResult
         uri ?: return@rememberLauncherForActivityResult
@@ -125,6 +133,19 @@ fun SettingsScreen(
                             }
                             Text(
                                 "Dica: use um PNG com fundo transparente, carro de lado/¾ de frente.",
+                                color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                GlassChip(if (count360 > 0) "Trocar fotos 360° ()" else "Fotos 360° (opcional)", Icons.Outlined.ScreenRotationAlt) {
+                                    pick360.launch("image/*")
+                                }
+                                if (count360 > 0) GlassChip("Remover 360°", Icons.Outlined.Restore) {
+                                    Images.dir360(context).deleteRecursively()
+                                    store.update { it.copy(vehicle360Version = it.vehicle360Version + 1) }
+                                }
+                            }
+                            Text(
+                                "Giro 360° completo: selecione de 24 a 36 PNGs sem fundo, tirados ao redor do carro em intervalos iguais, na ordem do giro.",
                                 color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -270,7 +291,7 @@ fun SettingsScreen(
             }
             item {
                 Section("Sobre") {
-                    Text("AutoGlass Launcher 1.2", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Text("AutoGlass Launcher 1.3", color = Glass.text, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Foto do veículo: “22 Jeep Compass Limited” por HJUdall, Wikimedia Commons, CC0 (domínio público) — " +
                             "recortada e repintada em branco. Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +

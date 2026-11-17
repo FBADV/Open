@@ -1,11 +1,30 @@
 package com.fbadv.autoglass.ui
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.ScreenRotationAlt
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -81,13 +100,14 @@ fun weatherIcon(w: Weather?): ImageVector = when (w?.code) {
 }
 
 /**
- * Palco do veículo (estilo centrais premium): relógio fino, nome do modelo,
- * o carro sobre o piso do ambiente com reflexo, sombra de contato e luz de
- * destaque, e o seletor de ambiente.
+ * Palco do veículo (estilo centrais premium), posicionado à direita da tela:
+ * relógio fino e nome do modelo, o carro girável com o dedo sobre o piso do
+ * ambiente e o seletor de ambiente.
  */
 @Composable
 fun VehicleStage(
     vehicle: ImageBitmap?,
+    frames360: List<ImageBitmap>,
     sceneMode: SceneMode,
     vehicleName: String,
     vehicleTrim: String,
@@ -95,6 +115,7 @@ fun VehicleStage(
     night: Boolean,
     onSceneChange: (SceneMode) -> Unit,
     modifier: Modifier = Modifier,
+    initialAngle: Float = 0f,
 ) {
     BoxWithConstraints(modifier) {
         val compact = maxHeight < 380.dp
@@ -102,8 +123,9 @@ fun VehicleStage(
         val selectorSpace = if (compact) 44.dp else 56.dp
         val wideStage = maxWidth / maxHeight > 1.8f
         val carW = minOf(maxWidth * (if (wideStage) 0.62f else 0.9f), (maxHeight - selectorSpace) * (if (wideStage) 0.80f else 0.68f) * carAspect)
-        val carShiftX = if (wideStage) maxWidth * 0.10f else 0.dp
         val carH = carW / carAspect
+        // palco à direita: o texto fica no canto direito e o carro um pouco à esquerda dele
+        val carShiftX = if (wideStage) -maxWidth * 0.10f else 0.dp
 
         // luz de destaque atrás do carro
         Canvas(Modifier.fillMaxSize()) {
@@ -118,7 +140,6 @@ fun VehicleStage(
                 ),
                 radius = r, center = c,
             )
-            // linha de luz no piso
             drawRect(
                 Brush.horizontalGradient(
                     0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.10f), 1f to Color.Transparent,
@@ -128,55 +149,24 @@ fun VehicleStage(
             )
         }
 
-        // carro + reflexo
-        AnimatedContent(
-            targetState = vehicle,
-            transitionSpec = { (slideInHorizontally(tween(800)) { it / 4 } + fadeIn(tween(600))) togetherWith fadeOut(tween(200)) },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(x = carShiftX, y = -selectorSpace + carH * 0.02f)
-                .width(carW)
-                .height(carH),
-            label = "vehicle",
-        ) { v ->
-            if (v != null) Box(Modifier.fillMaxSize()) {
-                // sombra de contato seguindo a perspectiva da foto (¾ de frente):
-                // faixa diagonal sob a carroceria + sombra concentrada em cada pneu
-                Canvas(Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter)) {
-                    val w = size.width; val h = size.height
-                    val a0 = Offset(w * 0.10f, h * 0.885f); val a1 = Offset(w * 0.93f, h * 0.715f)
-                    val steps = 14
-                    for (i in 0..steps) {
-                        val t = i / steps.toFloat()
-                        val c = Offset(a0.x + (a1.x - a0.x) * t, a0.y + (a1.y - a0.y) * t)
-                        val r = w * (0.13f - 0.05f * t)
-                        drawOval(
-                            Brush.radialGradient(listOf(Color.Black.copy(alpha = if (night) 0.30f else 0.22f), Color.Transparent), center = c, radius = r),
-                            topLeft = Offset(c.x - r, c.y - r * 0.35f), size = Size(r * 2, r * 0.7f),
-                        )
-                    }
-                    for ((c, r) in listOf(Offset(w * 0.52f, h * 0.965f) to w * 0.085f, Offset(w * 0.915f, h * 0.705f) to w * 0.055f)) {
-                        drawOval(
-                            Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent), center = c, radius = r),
-                            topLeft = Offset(c.x - r, c.y - r * 0.25f), size = Size(r * 2, r * 0.5f),
-                        )
-                    }
-                }
-                Image(
-                    v, vehicleName,
-                    Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter),
-                    contentScale = ContentScale.Fit,
-                    // o carro recebe a luz do ambiente: mais frio/escuro à noite
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply {
-                        if (night) setToScale(0.80f, 0.84f, 0.93f, 1f) else setToScale(1f, 1f, 1f, 1f)
-                    }),
-                )
-            }
+        if (vehicle != null) {
+            VehicleSpinner(
+                base = vehicle,
+                frames = frames360,
+                night = night,
+                vehicleName = vehicleName,
+                initialAngle = initialAngle,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(x = carShiftX, y = -selectorSpace + carH * 0.02f)
+                    .width(carW)
+                    .height(carH),
+            )
         }
 
-        // relógio
+        // relógio + nome (canto superior direito)
         val now = rememberNow()
-        Column(Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 4.dp)) {
+        Column(Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 4.dp), horizontalAlignment = Alignment.End) {
             Text(
                 SimpleDateFormat(if (clock24h) "HH:mm" else "h:mm", Locale("pt", "BR")).format(Date(now)),
                 style = MaterialTheme.typography.displayLarge.copy(fontSize = if (compact) 64.sp else 92.sp, shadow = Glass.textShadow),
@@ -189,12 +179,11 @@ fun VehicleStage(
             )
             if (wideStage) {
                 Spacer(Modifier.height(18.dp))
-                VehicleName(vehicleName, vehicleTrim, compact, Alignment.Start)
+                VehicleName(vehicleName, vehicleTrim, compact, Alignment.End)
             }
         }
-
-        if (!wideStage) Box(Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 14.dp)) {
-            VehicleName(vehicleName, vehicleTrim, compact, Alignment.End)
+        if (!wideStage) Box(Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 14.dp)) {
+            VehicleName(vehicleName, vehicleTrim, compact, Alignment.Start)
         }
 
         // seletor de ambiente
@@ -209,20 +198,165 @@ fun VehicleStage(
 
 @Composable
 private fun VehicleName(vehicleName: String, vehicleTrim: String, compact: Boolean, align: Alignment.Horizontal) {
-        Column(horizontalAlignment = align) {
-            Text(
-                vehicleName.uppercase(),
-                color = Glass.text,
-                fontSize = if (compact) 18.sp else 24.sp,
-                fontWeight = FontWeight.Light,
-                letterSpacing = 9.sp,
-                style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow),
-            )
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(18.dp).height(1.dp).background(Glass.accent))
-                Spacer(Modifier.width(8.dp))
-                Text(vehicleTrim.uppercase(), color = Glass.text.copy(alpha = 0.75f), fontSize = 11.sp, letterSpacing = 4.sp, style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow))
+    Column(horizontalAlignment = align) {
+        Text(
+            vehicleName.uppercase(),
+            color = Glass.text,
+            fontSize = if (compact) 18.sp else 24.sp,
+            fontWeight = FontWeight.Light,
+            letterSpacing = 9.sp,
+            style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow),
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(18.dp).height(1.dp).background(Glass.accent))
+            Spacer(Modifier.width(8.dp))
+            Text(vehicleTrim.uppercase(), color = Glass.text.copy(alpha = 0.75f), fontSize = 11.sp, letterSpacing = 4.sp, style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow))
+        }
+    }
+}
+
+/**
+ * Carro girável com o dedo (arrastar para os lados, com inércia).
+ *  - Com uma sequência de fotos ao redor do carro (8+ quadros): giro 360° real.
+ *  - Só com a foto padrão: giro 3D em perspectiva entre os dois lados
+ *    (frente-esquerda ↔ frente-direita) com brilho percorrendo a lataria.
+ * Depois de alguns segundos parado, volta suavemente à posição original.
+ */
+@Composable
+private fun VehicleSpinner(
+    base: ImageBitmap,
+    frames: List<ImageBitmap>,
+    night: Boolean,
+    vehicleName: String,
+    initialAngle: Float,
+    modifier: Modifier,
+) {
+    val angle = remember { Animatable(initialAngle) }
+    val scope = rememberCoroutineScope()
+    var touched by remember { mutableStateOf(false) }
+    var lastInteraction by remember { mutableStateOf(0L) }
+    val density = LocalDensity.current
+    val degPerPx = with(density) { 0.45f / 1.dp.toPx() }
+
+    // volta à posição de exibição depois de 6 s sem toque
+    LaunchedEffect(lastInteraction) {
+        if (lastInteraction == 0L) return@LaunchedEffect
+        delay(6000)
+        val target = (angle.value / 360f).roundToInt() * 360f
+        angle.animateTo(target, tween(1400, easing = FastOutSlowInEasing))
+    }
+
+    val tint = ColorFilter.colorMatrix(ColorMatrix().apply {
+        if (night) setToScale(0.80f, 0.84f, 0.93f, 1f) else setToScale(1f, 1f, 1f, 1f)
+    })
+
+    Box(
+        modifier.pointerInput(Unit) {
+            val tracker = VelocityTracker()
+            detectHorizontalDragGestures(
+                onDragStart = { tracker.resetTracking(); touched = true; scope.launch { angle.stop() } },
+                onDragEnd = {
+                    val v = tracker.calculateVelocity().x * degPerPx
+                    scope.launch {
+                        angle.animateDecay(v, exponentialDecay(frictionMultiplier = 1.6f))
+                        lastInteraction = System.currentTimeMillis()
+                    }
+                },
+            ) { change, dx ->
+                tracker.addPosition(change.uptimeMillis, change.position)
+                scope.launch { angle.snapTo(angle.value + dx * degPerPx) }
+            }
+        },
+    ) {
+        val a = angle.value
+        if (frames.size >= 8) {
+            val n = frames.size
+            val idx = ((((a % 360f) + 360f) % 360f) / 360f * n).toInt().coerceIn(0, n - 1)
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width; val h = size.height
+                drawOval(
+                    Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent), center = Offset(w / 2, h * 0.93f), radius = w * 0.5f),
+                    topLeft = Offset(0f, h * 0.86f), size = Size(w, h * 0.14f),
+                )
+            }
+            Image(frames[idx], vehicleName, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, colorFilter = tint)
+        } else {
+            // posição no círculo: lado A (foto) em 0°, lado B (espelho) em 180°
+            val norm = (((a + 180f) % 360f) + 360f) % 360f - 180f          // -180..180
+            val sideB = abs(norm) > 90f
+            val local = if (sideB) (if (norm > 0) norm - 180f else norm + 180f) else norm   // -90..90
+            val turn = abs(local) / 90f                                                    // 0 de frente, 1 de perfil
+            val squeeze = 1f - 0.38f * turn * turn
+            val fade = (1f - ((turn - 0.78f) / 0.22f).coerceIn(0f, 1f))
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        cameraDistance = 14f * density.density
+                        rotationY = local * 0.38f
+                        scaleX = squeeze * (if (sideB) -1f else 1f)
+                        alpha = 0.9f + 0.1f * fade
+                    },
+            ) {
+                ContactShadow(night)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            // brilho percorrendo a lataria conforme o giro
+                            val x = size.width * (0.5f + local / 140f)
+                            drawRect(
+                                Brush.linearGradient(
+                                    0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.10f + 0.12f * turn), 1f to Color.Transparent,
+                                    start = Offset(x - size.width * 0.25f, 0f), end = Offset(x + size.width * 0.25f, size.height * 0.3f),
+                                ),
+                                blendMode = BlendMode.SrcAtop,
+                            )
+                        },
+                ) {
+                    Image(base, vehicleName, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, colorFilter = tint)
+                }
             }
         }
+        // dica de interação (some depois do primeiro toque)
+        if (!touched) {
+            Row(
+                Modifier.align(Alignment.TopCenter).offset(y = (-6).dp)
+                    .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.ScreenRotationAlt, null, tint = Glass.text, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("ARRASTE PARA GIRAR", color = Glass.text.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/** Sombra de contato seguindo a perspectiva da foto (¾ de frente). */
+@Composable
+private fun ContactShadow(night: Boolean) {
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width; val h = size.height
+        val a0 = Offset(w * 0.10f, h * 0.885f); val a1 = Offset(w * 0.93f, h * 0.715f)
+        val steps = 14
+        for (i in 0..steps) {
+            val t = i / steps.toFloat()
+            val c = Offset(a0.x + (a1.x - a0.x) * t, a0.y + (a1.y - a0.y) * t)
+            val r = w * (0.13f - 0.05f * t)
+            drawOval(
+                Brush.radialGradient(listOf(Color.Black.copy(alpha = if (night) 0.30f else 0.22f), Color.Transparent), center = c, radius = r),
+                topLeft = Offset(c.x - r, c.y - r * 0.35f), size = Size(r * 2, r * 0.7f),
+            )
+        }
+        for ((c, r) in listOf(Offset(w * 0.52f, h * 0.965f) to w * 0.085f, Offset(w * 0.915f, h * 0.705f) to w * 0.055f)) {
+            drawOval(
+                Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent), center = c, radius = r),
+                topLeft = Offset(c.x - r, c.y - r * 0.25f), size = Size(r * 2, r * 0.5f),
+            )
+        }
+    }
 }

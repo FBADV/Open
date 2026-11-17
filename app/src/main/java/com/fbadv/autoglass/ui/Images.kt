@@ -48,6 +48,27 @@ object Images {
         return s
     }
 
+    /** Pasta com a sequência de fotos 360° do veículo (quadros em ordem de giro). */
+    fun dir360(context: Context): File = File(context.filesDir, "vehicle360")
+
+    fun load360(context: Context): List<Bitmap> =
+        dir360(context).listFiles()?.sortedBy { it.name }?.mapNotNull { decodeFile(it.absolutePath, 1100) }.orEmpty()
+
+    /** Substitui a sequência 360° pelas imagens escolhidas (na ordem da seleção). */
+    fun import360(context: Context, uris: List<Uri>): Int {
+        val dir = dir360(context)
+        dir.deleteRecursively(); dir.mkdirs()
+        var n = 0
+        uris.forEachIndexed { i, uri ->
+            runCatching {
+                val dst = File(dir, "frame_%03d.png".format(i))
+                context.contentResolver.openInputStream(uri)!!.use { input -> dst.outputStream().use { input.copyTo(it) } }
+                n++
+            }
+        }
+        return n
+    }
+
     /** Copia uma imagem escolhida pelo usuário para o armazenamento do app. */
     fun import(context: Context, uri: Uri, name: String): String? = runCatching {
         val dst = File(context.filesDir, name)

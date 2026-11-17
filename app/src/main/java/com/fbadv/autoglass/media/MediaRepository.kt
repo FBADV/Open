@@ -145,17 +145,63 @@ class MediaRepository(private val context: Context) {
         )
     }
 
+    /**
+     * Tocar/pausar. Com uma sessão ativa usa os controles dela; sem nenhuma,
+     * envia "play" (o Android retoma o último app de música) e, se nada
+     * começar a tocar, abre o app de música escolhido (YouTube Music).
+     */
     fun playPause() {
         val c = controller
         if (c != null) {
-            if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause()
-            else c.transportControls.play()
-        } else sendKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            val playing = c.playbackState?.state == PlaybackState.STATE_PLAYING ||
+                c.playbackState?.state == PlaybackState.STATE_BUFFERING
+            if (playing) command(c, PlaybackState.ACTION_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE) { it.pause() }
+            else command(c, PlaybackState.ACTION_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY) { it.play() }
+            return
+        }
+        sendKey(KeyEvent.KEYCODE_MEDIA_PLAY)
+        main.postDelayed({
+            refreshSessions()
+            if (_nowPlaying.value?.isPlaying != true) onNothingToPlay?.invoke()
+        }, 1500)
     }
 
-    fun next() = controller?.transportControls?.skipToNext() ?: sendKey(KeyEvent.KEYCODE_MEDIA_NEXT)
-    fun previous() = controller?.transportControls?.skipToPrevious() ?: sendKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
-    fun seekTo(ms: Long) { controller?.transportControls?.seekTo(ms) }
+    fun next() {
+        val c = controller ?: return sendKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+        command(c, PlaybackState.ACTION_SKIP_TO_NEXT, KeyEvent.KEYCODE_MEDIA_NEXT) { it.skipToNext() }
+    }
+
+    fun previous() {
+        val c = controller ?: return sendKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+        command(c, PlaybackState.ACTION_SKIP_TO_PREVIOUS, KeyEvent.KEYCODE_MEDIA_PREVIOUS) { it.skipToPrevious() }
+    }
+
+    fun seekTo(ms: Long) {
+        val c = controller ?: return
+        c.transportControls.seekTo(ms)
+        main.postDelayed({ publish() }, 300)
+    }
+
+    /** Chamado quando o usuário pede "play" e não há nada para retomar. */
+    var onNothingToPlay: (() -> Unit)? = null
+
+    /**
+     * Usa o comando do app se ele declara suportá-lo; caso contrário envia a
+     * tecla de mídia direto para a sessão do app (alguns apps só tratam teclas).
+     */
+    private fun command(c: MediaController, action: Long, key: Int, tc: (MediaController.TransportControls) -> Unit) {
+        val actions = c.playbackState?.actions ?: 0L
+        val ok = runCatching {
+            if (actions and action != 0L || actions == 0L) tc(c.transportControls)
+            else {
+                val now = SystemClock.uptimeMillis()
+                c.dispatchMediaButtonEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, key, 0))
+                c.dispatchMediaButtonEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, key, 0))
+            }
+        }.isSuccess
+        if (!ok) sendKey(key)
+        main.postDelayed({ publish() }, 400)
+    }
 
     private fun sendKey(code: Int) {
         val now = SystemClock.uptimeMillis()
@@ -173,4 +219,20 @@ class MediaRepository(private val context: Context) {
 
     fun accessSettingsIntent(): Intent =
         Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /**
+     * No Android 13+ apps instalados por APK precisam antes de "Permitir
+     * configurações restritas" (Informações do app → menu ⋮). Esta tela abre lá.
+     */
+    fun appInfoIntent(): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + context.packageName))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /** Pede direto o acesso ao listener (Android 11+), quando a central oferece a tela. */
+    fun directAccessIntent(): Intent? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null
+        return Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+            .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, listenerComponent.flattenToString())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
 }

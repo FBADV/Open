@@ -68,6 +68,7 @@ data class Settings(
     val mapZoom: Double = 16.0,
     val immersive: Boolean = true,
     val uiScale: Float = 1f,
+    val vehicle360Version: Int = 0,
 )
 
 /** Configurações persistidas em SharedPreferences, expostas como StateFlow. */
@@ -131,6 +132,7 @@ class SettingsStore(context: Context) {
             mapZoom = prefs.getFloat("mapZoom", 16f).toDouble(),
             immersive = prefs.getBoolean("immersive", true),
             uiScale = prefs.getFloat("uiScale", 1f),
+            vehicle360Version = prefs.getInt("v360", 0),
         )
     }
 
@@ -162,6 +164,7 @@ class SettingsStore(context: Context) {
             putFloat("mapZoom", s.mapZoom.toFloat())
             putBoolean("immersive", s.immersive)
             putFloat("uiScale", s.uiScale)
+            putInt("v360", s.vehicle360Version)
         }.apply()
     }
 
