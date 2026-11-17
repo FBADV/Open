@@ -71,6 +71,8 @@ O carro é um **modelo 3D do Compass** renderizado em 72 posições. Arraste par
 
 
 Com o **farol aceso** (modo escuro) o modelo aparece com faróis e lanternas ligados.
+![Giro 360° e vista de cima](docs/giro_360.png)
+
 Toque em **Topo** (ao lado dos ambientes) para ver o carro **de cima** e girá-lo com o dedo.
 
 O carro é o modelo 3D do **Jeep Compass branco com teto preto, película escura e rodas
