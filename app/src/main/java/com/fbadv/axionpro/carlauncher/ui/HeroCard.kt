@@ -120,7 +120,7 @@ fun VehicleStage(
 ) {
     BoxWithConstraints(modifier) {
         val compact = maxHeight < 380.dp
-        val carAspect = if (frames360 != null) 2.05f else vehicle?.let { it.width.toFloat() / it.height } ?: 1.75f
+        val carAspect = if (frames360 != null) frames360.aspect else vehicle?.let { it.width.toFloat() / it.height } ?: 1.75f
         val selectorSpace = if (compact) 44.dp else 56.dp
         val wideStage = maxWidth / maxHeight > 1.8f
         val carW = minOf(maxWidth * (if (wideStage) 0.70f else 0.94f), (maxHeight - selectorSpace) * (if (wideStage) 0.86f else 0.74f) * carAspect)

@@ -66,19 +66,16 @@ A escala é calculada pelo menor lado da tela, e em *Configurações → Tela* h
 
 ## Girar o veículo (360°)
 
-O carro é um **modelo 3D do Compass Limited** (branco, teto preto, rodas aro 19, grade de
-7 fendas) renderizado em 60 posições. Arraste para os lados: ele gira 360° com inércia
+O carro é um **modelo 3D do Compass** renderizado em 72 posições. Arraste para os lados: ele gira 360° com inércia
 (frente, laterais e traseira) e volta sozinho à posição de exibição.
 
 
 Com o **farol aceso** (modo escuro) o modelo aparece com faróis e lanternas ligados.
 Toque em **Topo** (ao lado dos ambientes) para ver o carro **de cima** e girá-lo com o dedo.
 
-O modelo atual é **provisório**. Para trocar pela renderização definitiva do Compass:
-envie um modelo 3D (.glb/.gltf) — `tools/vehicle3d/render_glb.js` gera os 60 quadros de
-dia, os 60 de noite e a vista de cima com a iluminação do launcher — ou imagens prontas
-(veja `tools/vehicle3d/README.md`). Pelo app: *Configurações → Veículo → Fotos 360° /
-Vista de cima*.
+O carro é o modelo 3D do **Jeep Compass branco com teto preto, película escura e rodas
+Limited 19″**, renderizado em 72 posições de dia e 72 de noite (faróis e lanternas acesos),
+mais a vista de cima. Para renderizar de novo ou trocar de modelo: `tools/vehicle3d/README.md`.
 
 ## Claro / escuro pelos faróis
 
@@ -152,7 +149,8 @@ tools/                     scripts que geraram a foto branca e os ambientes
 
 ## Créditos
 
-- Veículo: modelo 3D provisório (`tools/vehicle3d/placeholder_model.js`).
+- Veículo: “Jeep Compass 2022 Lowpoly”, por Davidson (Sketchfab), **CC BY 4.0**, adaptado
+  (branco, teto preto, película, rodas Limited 19″) — ver `tools/vehicle3d/models/CREDITS.md`.
 - Marca: símbolo Axion Pro Car Launcher (`branding/`), da família visual Axion.
 - Capas automáticas: busca pública do iTunes.
   Script: `tools/recolor_vehicle.py`.

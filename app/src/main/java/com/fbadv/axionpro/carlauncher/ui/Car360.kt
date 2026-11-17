@@ -17,6 +17,13 @@ import java.io.File
  */
 class FrameSource(private val frames: List<ByteArray>) {
     val count: Int get() = frames.size
+
+    /** Proporção largura/altura dos quadros (lida do primeiro, sem decodificar a imagem). */
+    val aspect: Float = frames.firstOrNull()?.let { b ->
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(b, 0, b.size, o)
+        if (o.outHeight > 0) o.outWidth.toFloat() / o.outHeight else null
+    } ?: 2.05f
     private val cache = LruCache<Int, ImageBitmap>(14)
 
     fun cached(i: Int): ImageBitmap? = cache.get(i)

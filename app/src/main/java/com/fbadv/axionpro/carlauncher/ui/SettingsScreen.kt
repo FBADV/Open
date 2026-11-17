@@ -145,7 +145,7 @@ fun SettingsScreen(
                                 }
                             }
                             Text(
-                                "Padrão: modelo 3D do Compass Limited (branco, teto preto, aro 19) com giro 360°. Foto própria: PNG sem fundo, ¾ de frente.",
+                                "Padrão: Compass 3D (branco, teto preto, rodas Limited 19″) com giro 360°, vista de cima e faróis acesos no modo escuro.",
                                 color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -311,9 +311,9 @@ fun SettingsScreen(
             }
             item {
                 Section("Sobre") {
-                    Text("Axion Pro Car Launcher 1.0", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Text("Axion Pro Car Launcher 1.1", color = Glass.text, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Veículo: modelo 3D estilizado do Compass Limited criado para o app (tools/car3d_model.js). Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
+                        "Veículo: “Jeep Compass 2022 Lowpoly”, por Davidson (Sketchfab), licença CC BY 4.0 — adaptado: branco, teto preto, película escura, rodas Limited 19″; renderizado para o launcher. Jeep e Compass são marcas da fabricante; sem afiliação. Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
                             "Mapas © OpenStreetMap (sem chave de API). Tempo: Open-Meteo.com (CC BY 4.0). " +
                             "Jeep e Compass são marcas de seus respectivos donos; app pessoal sem vínculo com a fabricante.",
                         color = Glass.textDim,
