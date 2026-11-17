@@ -110,7 +110,9 @@ tools/                     scripts que geraram a foto branca e os ambientes
 
 - Foto do veículo: "22 Jeep Compass Limited", por HJUdall, Wikimedia Commons,
   **CC0 (domínio público)**. Recortada e repintada digitalmente em branco
-  (original vermelho, mesma versão Limited com teto preto e rodas aro 19).
+  (original vermelho, mesma versão Limited com teto preto e rodas aro 19),
+  com adesivos do para-brisa removidos e placa Mercosul sem caracteres.
+  Script: `tools/recolor_vehicle.py`.
 - Ambientes Rua, Dunas, Estrada e Lama: ilustrações geradas por `tools/generate_scenes.py`.
 - Mapas © OpenStreetMap contributors © CARTO. Previsão: Open-Meteo.com (CC BY 4.0).
 - Jeep e Compass são marcas de seus respectivos titulares. Este é um projeto pessoal,
