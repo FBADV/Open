@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "AutoGlassLauncher"
+rootProject.name = "AxionProCarLauncher"
 include(":app")

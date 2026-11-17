@@ -1,10 +1,14 @@
-# AutoGlass Launcher
+<img src="branding/axion-pro-carlauncher-mark.svg" width="96" align="right" />
+
+# Axion Pro Car Launcher
 
 Launcher (tela inicial) para centrais multimídia **Android** de 9" a 15", com visual
 premium no estilo das centrais de veículos modernos: fundo grafite, o carro em um
 "palco" com reflexo no piso, tipografia fina, painéis em vidro fumê e uma única cor
 de destaque. Começa configurada para um **Jeep Compass Limited branco com teto
 preto e rodas aro 19**.
+
+![Axion Pro Car Launcher](docs/axion-pro-carlauncher-logo.png)
 
 ![Modo claro](docs/tela_10pol_1920x720_estudio_dia_wide.png)
 
@@ -19,12 +23,12 @@ preto e rodas aro 19**.
 
 ## Baixar e instalar
 
-1. Baixe o APK pronto: [`dist/AutoGlass-1.4.0.apk`](dist/AutoGlass-1.4.0.apk)
+1. Baixe o APK pronto: [`dist/AxionProCarLauncher-1.0.0.apk`](dist/AxionProCarLauncher-1.0.0.apk)
    (ou a versão mais nova na aba **Actions → Build APK → Artifacts**).
 2. Copie para um pendrive e abra pelo gerenciador de arquivos da central
    (permita "instalar apps de fontes desconhecidas"). Por cabo/Wi-Fi:
-   `adb install -r AutoGlass-1.4.0.apk`.
-3. Na primeira abertura o Android pergunta se o **AutoGlass deve ser o app de tela
+   `adb install -r AxionProCarLauncher-1.0.0.apk`.
+3. Na primeira abertura o Android pergunta se o **Axion Pro deve ser o app de tela
    inicial padrão** — confirme. A partir daí ele é a tela principal: aparece ao ligar
    a central e ao tocar em Home. (Se não perguntar: *Configurações → Permissões e
    sistema → Tela inicial padrão*. Algumas centrais FYT/SYU escolhem o launcher nas
@@ -36,8 +40,8 @@ preto e rodas aro 19**.
      "teclas de mídia", que muitas centrais desviam para o player de fábrica.
      No **Android 13+** apps instalados por APK têm essa opção bloqueada: antes, abra
      *Informações do app → menu ⋮ → Permitir configurações restritas*, depois
-     *Acesso a notificações → AutoGlass*. O próprio cartão mostra esse passo a passo;
-   - **Sobrepor a outros apps**: permite abrir o AutoGlass sozinho quando a central
+     *Acesso a notificações → Axion Pro*. O próprio cartão mostra esse passo a passo;
+   - **Sobrepor a outros apps**: permite abrir o Axion Pro sozinho quando a central
      liga ou acorda (Android 10+) e o botão Home flutuante.
 
 Requisitos: Android 7.0 ou mais novo (FYT/SYU, MTCD/Microntek, TS, Topway e
@@ -66,12 +70,15 @@ O carro é um **modelo 3D do Compass Limited** (branco, teto preto, rodas aro 19
 7 fendas) renderizado em 60 posições. Arraste para os lados: ele gira 360° com inércia
 (frente, laterais e traseira) e volta sozinho à posição de exibição.
 
-![Giro 360°](docs/giro_360.png)
 
 Com o **farol aceso** (modo escuro) o modelo aparece com faróis e lanternas ligados.
-Também é possível usar suas próprias fotos 360° em *Configurações → Veículo → Fotos 360°*
-(24 a 36 PNGs sem fundo, na ordem do giro). O modelo é gerado por `tools/car3d_model.js`
-(three.js) e renderizado com `tools/car3d_render.js`.
+Toque em **Topo** (ao lado dos ambientes) para ver o carro **de cima** e girá-lo com o dedo.
+
+O modelo atual é **provisório**. Para trocar pela renderização definitiva do Compass:
+envie um modelo 3D (.glb/.gltf) — `tools/vehicle3d/render_glb.js` gera os 60 quadros de
+dia, os 60 de noite e a vista de cima com a iluminação do launcher — ou imagens prontas
+(veja `tools/vehicle3d/README.md`). Pelo app: *Configurações → Veículo → Fotos 360° /
+Vista de cima*.
 
 ## Claro / escuro pelos faróis
 
@@ -109,7 +116,7 @@ Se a sua central tiver **janelas de formato livre**, ative em *Opções do desen
 1. **Forçar atividades a serem redimensionáveis**;
 2. **Ativar janelas de formato livre**;
 
-e no AutoGlass ligue *Abrir apps em janela sobre o painel*. Aparece um botão de janela
+e no Axion Pro ligue *Abrir apps em janela sobre o painel*. Aparece um botão de janela
 no painel, que abre o Waze, o Google Maps ou o YouTube **reais** no espaço do painel.
 
 ## Limites conhecidos
@@ -118,7 +125,7 @@ no painel, que abre o Waze, o Google Maps ou o YouTube **reais** no espaço do p
   CAN de cada fabricante de central e não são acessíveis por um app comum. Use os apps de
   fábrica pela gaveta de apps.
 - Previsão do tempo e mapa precisam de internet (roteador do celular ou chip na central).
-- Para atualizar, instale o APK novo por cima: os dois são assinados com a mesma chave
+- Para atualizar, instale o APK novo por cima: as versões são assinadas com a mesma chave
   de desenvolvimento (`keystore/`). Antes de distribuir publicamente, troque por uma chave própria.
 
 ## Compilar
@@ -131,7 +138,7 @@ no painel, que abre o Waze, o Google Maps ou o YouTube **reais** no espaço do p
 Projeto em Kotlin + Jetpack Compose. Estrutura:
 
 ```
-app/src/main/java/com/fbadv/autoglass/
+app/src/main/java/com/fbadv/axionpro/carlauncher/
   MainActivity.kt          tela inicial (HOME), modo imersivo, ciclo de vida
   data/                    configurações, lista de apps, pacotes conhecidos
   media/                   sessões de mídia (o que está tocando + controles)
@@ -145,7 +152,8 @@ tools/                     scripts que geraram a foto branca e os ambientes
 
 ## Créditos
 
-- Veículo: modelo 3D estilizado do Compass Limited criado para o app (`tools/car3d_model.js`).
+- Veículo: modelo 3D provisório (`tools/vehicle3d/placeholder_model.js`).
+- Marca: símbolo Axion Pro Car Launcher (`branding/`), da família visual Axion.
 - Capas automáticas: busca pública do iTunes.
   Script: `tools/recolor_vehicle.py`.
 - Ambientes Estúdio, Rua, Dunas, Estrada e Lama: gerados por `tools/generate_scenes.py`.

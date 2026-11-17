@@ -1,4 +1,4 @@
-name: Build APK
+name: Axion Pro Car Launcher — APK
 
 on:
   push:
@@ -19,5 +19,5 @@ jobs:
         run: ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
-          name: AutoGlass-apk
+          name: AxionPro-CarLauncher-apk
           path: app/build/outputs/apk/release/app-release.apk

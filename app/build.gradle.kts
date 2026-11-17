@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "com.fbadv.autoglass"
+    namespace = "com.fbadv.axionpro.carlauncher"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.fbadv.autoglass"
+        applicationId = "com.fbadv.axionpro.carlauncher"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 1
+        versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -23,10 +23,10 @@ android {
         // atualizações por cima sem desinstalar. Troque por uma chave própria
         // antes de distribuir publicamente.
         create("shared") {
-            storeFile = rootProject.file("keystore/autoglass-dev.jks")
-            storePassword = "autoglass"
-            keyAlias = "autoglass"
-            keyPassword = "autoglass"
+            storeFile = rootProject.file("keystore/axionpro-dev.jks")
+            storePassword = "axionpro"
+            keyAlias = "axionpro"
+            keyPassword = "axionpro"
         }
     }
 

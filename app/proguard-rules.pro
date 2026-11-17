@@ -1,3 +1,3 @@
 -keep class org.osmdroid.** { *; }
 -dontwarn org.osmdroid.**
--keep class com.fbadv.autoglass.media.MediaListenerService { *; }
+-keep class com.fbadv.axionpro.carlauncher.media.MediaListenerService { *; }

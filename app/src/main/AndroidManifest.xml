@@ -27,14 +27,14 @@
     </queries>
 
     <application
-        android:name=".AutoGlassApp"
+        android:name=".AxionApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.AutoGlass"
+        android:theme="@style/Theme.AxionPro"
         tools:targetApi="34">
 
         <activity
