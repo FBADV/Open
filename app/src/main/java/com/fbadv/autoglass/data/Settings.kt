@@ -8,10 +8,19 @@ import kotlinx.coroutines.flow.update
 
 /** Ambientes (fundos) onde o veículo é exibido. */
 enum class SceneMode(val label: String, val key: String) {
+    ESTUDIO("Estúdio", "estudio"),
     RUA("Rua", "rua"),
     DUNAS("Dunas", "dunas"),
     ESTRADA("Estrada", "estrada"),
     LAMA("Lama", "lama"),
+}
+
+/** Cor de destaque da interface (o restante é grafite/preto). */
+enum class AccentTheme(val label: String, val argb: Long) {
+    GELO("Azul gelo", 0xFF8ED1FF),
+    CHAMPAGNE("Champagne", 0xFFD8B98A),
+    ESPORTIVO("Vermelho", 0xFFFF5A4E),
+    PLATINA("Platina", 0xFFE6EAF0),
 }
 
 /** O que o painel interativo central mostra. */
@@ -32,7 +41,8 @@ enum class AppRole(val label: String, val key: String) {
 }
 
 data class Settings(
-    val scene: SceneMode = SceneMode.ESTRADA,
+    val scene: SceneMode = SceneMode.ESTUDIO,
+    val accent: AccentTheme = AccentTheme.GELO,
     val favorites: List<String> = emptyList(),
     val roles: Map<AppRole, String> = emptyMap(),
     val livePanel: LivePanelMode = LivePanelMode.MAPA,
@@ -86,6 +96,7 @@ class SettingsStore(context: Context) {
         val d = Settings()
         return Settings(
             scene = SceneMode.entries.firstOrNull { it.key == prefs.getString("scene", null) } ?: d.scene,
+            accent = AccentTheme.entries.firstOrNull { it.name == prefs.getString("accent", null) } ?: d.accent,
             favorites = prefs.getString("favorites", "")!!.split('|').let { l ->
                 List(MAX_FAVORITES) { l.getOrNull(it).orEmpty() }
             },
@@ -113,6 +124,7 @@ class SettingsStore(context: Context) {
     private fun save(s: Settings) {
         prefs.edit().apply {
             putString("scene", s.scene.key)
+            putString("accent", s.accent.name)
             putString("favorites", s.favorites.joinToString("|"))
             AppRole.entries.forEach { r ->
                 val v = s.roles[r]

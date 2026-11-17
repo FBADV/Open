@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +30,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.fbadv.autoglass.ui.theme.Glass
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -124,7 +127,9 @@ fun LauncherRoot(screen: MutableState<Screen>) {
         goTo = { screen.value = it },
     )
 
-    LauncherSurface(blurred, settings.uiScale) {
+    SideEffect { Glass.accent = Color(settings.accent.argb) }
+    val network = rememberNetworkState()
+    LauncherSurface(scene, blurred, settings.uiScale, dimForOverlay = screen.value != Screen.HOME) {
                 AnimatedContent(
                     targetState = screen.value,
                     transitionSpec = { (fadeIn(tween(250)) + scaleIn(tween(250), initialScale = 0.97f)) togetherWith fadeOut(tween(150)) },
@@ -133,7 +138,7 @@ fun LauncherRoot(screen: MutableState<Screen>) {
                     when (s) {
                         Screen.HOME -> Dashboard(
                             settings = settings,
-                            scene = scene,
+                            network = network,
                             vehicle = vehicle,
                             weather = weather,
                             nowPlaying = nowPlaying,
@@ -194,8 +199,14 @@ fun LauncherRoot(screen: MutableState<Screen>) {
  * usado pelos painéis de vidro.
  */
 @Composable
-fun LauncherSurface(blurred: ImageBitmap?, uiScale: Float, content: @Composable () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF060A14))) {
+fun LauncherSurface(
+    scene: ImageBitmap?,
+    blurred: ImageBitmap?,
+    uiScale: Float,
+    dimForOverlay: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Glass.surface)) {
         val wPx = constraints.maxWidth
         val hPx = constraints.maxHeight
         val density = (min(wPx, hPx) / DESIGN_SHORT_SIDE * uiScale).coerceIn(0.6f, 4f)
@@ -205,8 +216,19 @@ fun LauncherSurface(blurred: ImageBitmap?, uiScale: Float, content: @Composable 
             LocalBackdrop provides backdrop,
         ) {
             Box(Modifier.fillMaxSize()) {
-                blurred?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                Box(Modifier.fillMaxSize().background(Color(0x70050914)))
+                // ambiente em tela cheia, com tratamento cinematográfico
+                scene?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(0f to Color(0xCC050608), 0.16f to Color(0x33050608), 0.72f to Color(0x00050608), 1f to Color(0xE6050608)),
+                    ),
+                )
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(0f to Color(0x66050608), 0.25f to Color.Transparent, 0.55f to Color.Transparent, 1f to Color(0x99050608)),
+                    ),
+                )
+                if (dimForOverlay) Box(Modifier.fillMaxSize().background(Color(0xB3050608)))
                 content()
             }
         }
@@ -238,7 +260,7 @@ class DashboardActions(
 @Composable
 fun Dashboard(
     settings: com.fbadv.autoglass.data.Settings,
-    scene: ImageBitmap?,
+    network: NetworkState,
     vehicle: ImageBitmap?,
     weather: com.fbadv.autoglass.weather.Weather?,
     nowPlaying: com.fbadv.autoglass.media.NowPlaying?,
@@ -249,31 +271,22 @@ fun Dashboard(
     shortcuts: List<AppEntry>,
     actions: DashboardActions,
 ) {
-    val onOpen = actions.openApp
-    val onOpenRole = actions.openRole
-    val onPickRole = actions.pickRole
-    val onPickFavorite = actions.pickFavorite
-    val onPickWidget = actions.pickWidget
-    val onScreen = actions.goTo
-    val railItems = listOf(
+    val dockItems = listOf(
         RailItem(HomeIcon, "Início", null, active = true, onClick = {}),
-        *listOf(AppRole.NAVIGATION, AppRole.MUSIC, AppRole.RADIO, AppRole.PHONE, AppRole.VIDEO).map { r ->
-            RailItem(roleIcon(r), r.label, r, onClick = { onOpenRole(r, null) }, onLongClick = { onPickRole(r) })
-        }.toTypedArray(),
-    )
-    val railBottom = listOf(
-        RailItem(AppsIcon, "Apps", null, onClick = { onScreen(Screen.APPS) }),
-        RailItem(SettingsIcon, "Configurações", null, onClick = { onScreen(Screen.SETTINGS) }),
+    ) + listOf(AppRole.NAVIGATION, AppRole.MUSIC, AppRole.RADIO, AppRole.PHONE, AppRole.VIDEO).map { r ->
+        RailItem(roleIcon(r), r.label, r, onClick = { actions.openRole(r, null) }, onLongClick = { actions.pickRole(r) })
+    }
+    val dockTrailing = listOf(
+        RailItem(AppsIcon, "Apps", null, onClick = { actions.goTo(Screen.APPS) }),
+        RailItem(SettingsIcon, "Configurações", null, onClick = { actions.goTo(Screen.SETTINGS) }),
     )
 
-    val hero: @Composable (Modifier) -> Unit = { m ->
-        VehicleHero(
-            scene = scene,
-            sceneMode = settings.scene,
+    val stage: @Composable (Modifier) -> Unit = { m ->
+        VehicleStage(
             vehicle = vehicle,
+            sceneMode = settings.scene,
             vehicleName = settings.vehicleName,
             vehicleTrim = settings.vehicleTrim,
-            weather = weather,
             clock24h = settings.clock24h,
             onSceneChange = actions.setScene,
             modifier = m,
@@ -288,12 +301,12 @@ fun Dashboard(
             onModeChange = actions.setLiveMode,
             onExpand = { mode, bounds ->
                 when (mode) {
-                    LivePanelMode.MAPA -> onOpenRole(AppRole.NAVIGATION, bounds)
-                    LivePanelMode.VIDEO -> onOpenRole(AppRole.VIDEO, bounds)
+                    LivePanelMode.MAPA -> actions.openRole(AppRole.NAVIGATION, bounds)
+                    LivePanelMode.VIDEO -> actions.openRole(AppRole.VIDEO, bounds)
                     LivePanelMode.WIDGET -> actions.openWidgetApp()
                 }
             },
-            onPickWidget = onPickWidget,
+            onPickWidget = actions.pickWidget,
             modifier = m,
         )
     }
@@ -304,7 +317,7 @@ fun Dashboard(
             shortcuts = shortcuts,
             radio = radio,
             player = player,
-            onOpenApp = onOpen,
+            onOpenApp = actions.openApp,
             onOpenSource = actions.openPackage,
             onGrantAccess = actions.grantMediaAccess,
             onPrevious = actions.previous,
@@ -313,51 +326,58 @@ fun Dashboard(
             modifier = m,
         )
     }
-    val favs: @Composable (Modifier, Int) -> Unit = { m, cols ->
-        FavoritesCard(
+    val dock: @Composable (Modifier) -> Unit = { m ->
+        Dock(
+            items = dockItems,
             favorites = favorites,
-            columns = cols,
-            onOpen = onOpen,
-            onPick = onPickFavorite,
-            onRemove = actions.removeFavorite,
+            trailing = dockTrailing,
+            onOpenFavorite = actions.openApp,
+            onPickFavorite = actions.pickFavorite,
+            onRemoveFavorite = actions.removeFavorite,
             modifier = m,
         )
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().padding(14.dp)) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 10.dp)) {
         val aspect = maxWidth / maxHeight
         val gap = 14.dp
-        when {
-            // telas largas (ex.: 1920x720, 1280x480) — 3 colunas, como no CarPlay
-            aspect >= 1.95f -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                SideRail(railItems, railBottom, vertical = true, modifier = Modifier.width(72.dp).fillMaxHeight())
-                hero(Modifier.weight(1.3f).fillMaxHeight())
-                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
-                    live(Modifier.weight(1.25f).fillMaxWidth())
-                    media(Modifier.weight(1f).fillMaxWidth())
-                }
-                favs(Modifier.weight(0.42f).fillMaxHeight(), 1)
-            }
-            // 16:9 / 16:10 (ex.: 1024x600, 1280x720, 1920x1080, 2000x1200)
-            aspect >= 1.15f -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                SideRail(railItems, railBottom, vertical = true, modifier = Modifier.width(72.dp).fillMaxHeight())
-                Column(Modifier.weight(1.12f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
-                    hero(Modifier.weight(1.3f).fillMaxWidth())
-                    Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        media(Modifier.weight(1.6f).fillMaxHeight())
-                        favs(Modifier.weight(1f).fillMaxHeight(), 2)
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
+            StatusBar(weather, network, Modifier.fillMaxWidth().height(28.dp))
+            when {
+                aspect >= 1.15f -> Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    stage(Modifier.weight(if (aspect >= 1.95f) 1.45f else 1.1f).fillMaxHeight())
+                    Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                        live(Modifier.weight(1.2f).fillMaxWidth())
+                        media(Modifier.weight(1f).fillMaxWidth())
                     }
                 }
-                live(Modifier.weight(1f).fillMaxHeight())
+                else -> Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                    stage(Modifier.weight(1.05f).fillMaxWidth())
+                    live(Modifier.weight(1f).fillMaxWidth())
+                    media(Modifier.height(190.dp).fillMaxWidth())
+                }
             }
-            // telas em pé (estilo Tesla, 10"–15" verticais)
-            else -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
-                hero(Modifier.weight(1f).fillMaxWidth())
-                live(Modifier.weight(1.15f).fillMaxWidth())
-                media(Modifier.height(200.dp).fillMaxWidth())
-                favs(Modifier.height(130.dp).fillMaxWidth(), 4)
-                SideRail(railItems, railBottom, vertical = false, modifier = Modifier.fillMaxWidth().height(76.dp))
-            }
+            dock(Modifier.fillMaxWidth().height(72.dp))
         }
     }
+}
+
+@Composable
+private fun rememberNetworkState(): NetworkState {
+    val context = LocalContext.current
+    val state by produceState(NetworkState.OFFLINE) {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+        while (true) {
+            value = runCatching {
+                val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+                when {
+                    caps == null -> NetworkState.OFFLINE
+                    caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> NetworkState.WIFI
+                    else -> NetworkState.CELLULAR
+                }
+            }.getOrDefault(NetworkState.OFFLINE)
+            kotlinx.coroutines.delay(10_000)
+        }
+    }
+    return state
 }

@@ -14,6 +14,7 @@ import java.io.File
 
 object Images {
     fun sceneRes(mode: SceneMode): Int = when (mode) {
+        SceneMode.ESTUDIO -> R.drawable.scene_estudio
         SceneMode.RUA -> R.drawable.scene_rua
         SceneMode.DUNAS -> R.drawable.scene_dunas
         SceneMode.ESTRADA -> R.drawable.scene_estrada

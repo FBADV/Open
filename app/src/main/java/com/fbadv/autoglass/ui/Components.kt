@@ -54,7 +54,7 @@ fun GlassBox(
     content: @Composable BoxScope.() -> Unit,
 ) = Box(modifier.glass(shape), content = content)
 
-/** Botão redondo de vidro com ícone. */
+/** Botão de ícone em traço fino; ativo ganha halo na cor de destaque. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GlassIconButton(
@@ -64,6 +64,7 @@ fun GlassIconButton(
     size: Dp = 48.dp,
     tint: Color = Glass.text,
     active: Boolean = false,
+    filled: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -71,8 +72,14 @@ fun GlassIconButton(
     Box(
         modifier
             .size(size)
-            .glass(CircleShape, strength = if (active) 2.2f else 1f)
-            .then(if (active) Modifier.background(Glass.accentSoft, CircleShape) else Modifier)
+            .clip(CircleShape)
+            .then(
+                when {
+                    filled -> Modifier.background(Glass.text, CircleShape)
+                    active -> Modifier.background(Glass.accentSoft, CircleShape)
+                    else -> Modifier.background(Color.White.copy(alpha = 0.04f), CircleShape)
+                },
+            )
             .combinedClickable(
                 interactionSource = interaction,
                 indication = androidx.compose.material3.ripple(bounded = true),
@@ -81,7 +88,11 @@ fun GlassIconButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(size * 0.5f))
+        Icon(
+            icon, contentDescription,
+            tint = when { filled -> Color(0xFF0B0D11); active -> Glass.accent; else -> tint },
+            modifier = Modifier.size(size * 0.46f),
+        )
     }
 }
 
@@ -160,7 +171,7 @@ fun AppTile(
     }
 }
 
-/** Botão em pílula de vidro com ícone e texto. */
+/** Pílula discreta: selecionada fica clara com texto escuro (estilo premium). */
 @Composable
 fun GlassChip(
     text: String,
@@ -169,20 +180,46 @@ fun GlassChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val fg = if (selected) Color(0xFF0B0D11) else Glass.textDim
     Row(
         modifier
-            .glass(RoundedCornerShape(50), strength = if (selected) 2.4f else 0.9f, border = true)
-            .then(if (selected) Modifier.background(Glass.accent.copy(alpha = 0.55f), RoundedCornerShape(50)) else Modifier)
             .clip(RoundedCornerShape(50))
-            .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .background(if (selected) Glass.text else Color.White.copy(alpha = 0.05f), RoundedCornerShape(50))
+            .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) }
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = Glass.text, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
+            Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
+            if (text.isNotEmpty()) Spacer(Modifier.width(6.dp))
         }
-        Text(text, color = Glass.text, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
+        if (text.isNotEmpty()) {
+            Text(text, color = fg, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)
+        }
+    }
+}
+
+/** Abas em texto com sublinhado na cor de destaque. */
+@Composable
+fun TextTabs(items: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+        items.forEachIndexed { i, t ->
+            Column(
+                Modifier.clip(RoundedCornerShape(8.dp)).pointerInput(i) { detectTapGestures(onTap = { onSelect(i) }) }.padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    t.uppercase(),
+                    color = if (i == selected) Glass.text else Glass.textFaint,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Spacer(Modifier.height(5.dp))
+                Box(
+                    Modifier.width(if (i == selected) 18.dp else 0.dp).height(2.dp)
+                        .background(Glass.accent, RoundedCornerShape(1.dp)),
+                )
+            }
+        }
     }
 }
 

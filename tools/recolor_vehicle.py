@@ -75,3 +75,30 @@ res.save("white_v2.png")
 bb=res.getbbox(); res.crop((bb[0]-6,bb[1]-6,bb[2]+6,bb[3]+6)).save("vehicle_v2.png",optimize=True)
 c=Image.new("RGBA",res.size,(150,160,175,255)); c.alpha_composite(res)
 c.convert("RGB").crop((200,170,1080,680)).resize((1760,1020)).save("white_v2_view.jpg",quality=88)
+
+# ---------- acabamento "estúdio" (v3) ----------
+o=np.asarray(Image.open("white_v2.png").convert("RGBA")).astype(np.float32)/255
+c=o[...,:3].copy()
+# carroceria: superfície lisa (sem reflexos do estacionamento) preservando vincos
+lum=0.3*c[...,0]+0.59*c[...,1]+0.11*c[...,2]
+smooth=cv2.bilateralFilter((lum*255).astype(np.uint8),0,30,7).astype(np.float32)/255
+smooth=cv2.GaussianBlur(smooth,(0,0),3)
+Ls=0.45*lum+0.55*smooth
+Ls=np.clip(0.70+(Ls-0.78)/0.22*0.30,0.55,1.0)          # mais volume: sombras mais profundas
+ys,xs=np.where(m3); top,bot=ys.min(),ys.max()
+grad=np.clip((np.arange(H)[:,None]-top)/(bot-top),0,1)
+Ls=np.clip(Ls*(1.02-0.08*grad),0,1)                   # luz de estúdio vinda de cima
+yy=(np.arange(H)[:,None]/H)
+white3=np.dstack([Ls*0.975,Ls*0.983,Ls*1.0])
+c=c*(1-mask[...,None])+white3*mask[...,None]
+# vidros escuros (insulfilm) com reflexo suave
+win=(poly([(560,90),(1180,70),(1190,120),(1100,300),(1000,298),(560,262)])|poly([(1150,80),(1560,90),(1600,200),(1600,240),(1440,280),(1300,292),(1112,300)]))&(al>0.5)
+wm=cv2.GaussianBlur(win.astype(np.float32),(0,0),1.2)[...,None]
+gl=c*0.32+np.dstack([np.full((H,W),0.05),np.full((H,W),0.07),np.full((H,W),0.10)])
+refl=np.clip(1-((yy*H-110)/120)**2,0,1)[...,None]*0.10   # faixa de reflexo
+gl=gl+refl*np.array([0.7,0.8,1.0])
+c=c*(1-wm)+gl*wm
+res3=Image.fromarray((np.dstack([np.clip(c,0,1),o[...,3]])*255).astype(np.uint8))
+bb=res3.getbbox(); res3.crop((bb[0]-6,bb[1]-6,bb[2]+6,bb[3]+6)).save("vehicle_v3.png",optimize=True)
+cc=Image.new("RGBA",res3.size,(18,20,24,255)); cc.alpha_composite(res3)
+cc.convert("RGB").crop((200,170,1080,680)).resize((1760,1020)).save("v3_view.jpg",quality=88)

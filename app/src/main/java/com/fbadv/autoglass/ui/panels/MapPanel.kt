@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -26,6 +26,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.fbadv.autoglass.AutoGlassApp
 import com.fbadv.autoglass.ui.GlassIconButton
 import com.fbadv.autoglass.ui.theme.Glass
+import com.fbadv.autoglass.ui.theme.glass
+import androidx.compose.foundation.shape.RoundedCornerShape
 import org.osmdroid.tileprovider.tilesource.ITileSource
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.views.CustomZoomButtonsController
@@ -119,12 +121,12 @@ fun MapPanel(
             modifier = Modifier.fillMaxSize(),
         )
         Column(
-            Modifier.align(Alignment.CenterEnd).padding(10.dp),
+            Modifier.align(Alignment.CenterEnd).padding(10.dp).glass(RoundedCornerShape(24.dp)).padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            GlassIconButton(Icons.Rounded.Add, "Aproximar", size = 40.dp) { map.controller.zoomIn() }
-            GlassIconButton(Icons.Rounded.Remove, "Afastar", size = 40.dp) { map.controller.zoomOut() }
-            GlassIconButton(Icons.Rounded.MyLocation, "Centralizar", size = 40.dp) {
+            GlassIconButton(Icons.Outlined.Add, "Aproximar", size = 38.dp) { map.controller.zoomIn() }
+            GlassIconButton(Icons.Outlined.Remove, "Afastar", size = 38.dp) { map.controller.zoomOut() }
+            GlassIconButton(Icons.Outlined.MyLocation, "Centralizar", size = 38.dp) {
                 holder[0]?.let { o ->
                     o.enableFollowLocation()
                     o.myLocation?.let { map.controller.animateTo(it) }

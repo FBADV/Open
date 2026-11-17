@@ -18,8 +18,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -63,7 +63,7 @@ fun AppDrawer(
         Row(verticalAlignment = Alignment.CenterVertically) {
             SearchField(query, { query = it }, Modifier.weight(1f))
             Spacer(Modifier.width(12.dp))
-            GlassIconButton(Icons.Rounded.Close, "Fechar", onClick = onClose)
+            GlassIconButton(Icons.Outlined.Close, "Fechar", onClick = onClose)
         }
         Spacer(Modifier.size(14.dp))
         LazyVerticalGrid(
@@ -96,7 +96,7 @@ fun SearchField(value: String, onChange: (String) -> Unit, modifier: Modifier = 
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Rounded.Search, null, tint = Glass.textDim)
+        Icon(Icons.Outlined.Search, null, tint = Glass.textDim)
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
             if (value.isEmpty()) Text("Buscar apps", color = Glass.textFaint, fontSize = 17.sp)

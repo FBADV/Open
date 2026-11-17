@@ -25,9 +25,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -54,6 +54,10 @@ import androidx.compose.ui.unit.sp
 import com.fbadv.autoglass.AutoGlassApp
 import com.fbadv.autoglass.data.AppEntry
 import com.fbadv.autoglass.data.AppRole
+import com.fbadv.autoglass.data.AccentTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import com.fbadv.autoglass.data.LivePanelMode
 import com.fbadv.autoglass.data.SceneMode
 import com.fbadv.autoglass.data.Settings
@@ -98,7 +102,7 @@ fun SettingsScreen(
     Column(modifier.fillMaxSize().glass(strength = 1.6f).padding(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Configurações", color = Glass.text, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            GlassIconButton(Icons.Rounded.Close, "Fechar", onClick = onClose)
+            GlassIconButton(Icons.Outlined.Close, "Fechar", onClick = onClose)
         }
         Spacer(Modifier.size(12.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxSize()) {
@@ -111,9 +115,9 @@ fun SettingsScreen(
                             LabeledField("Modelo", settings.vehicleName) { v -> store.update { it.copy(vehicleName = v) } }
                             LabeledField("Versão", settings.vehicleTrim) { v -> store.update { it.copy(vehicleTrim = v) } }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                GlassChip("Usar foto do meu veículo", Icons.Rounded.Image, selected = true) { pickVehicle.launch("image/*") }
+                                GlassChip("Usar foto do meu veículo", Icons.Outlined.Image, selected = true) { pickVehicle.launch("image/*") }
                                 if (settings.customVehiclePath != null) {
-                                    GlassChip("Voltar ao Compass Limited", Icons.Rounded.Restore) {
+                                    GlassChip("Voltar ao Compass Limited", Icons.Outlined.Restore) {
                                         store.update { it.copy(customVehiclePath = null, vehicleName = "Compass", vehicleTrim = "Limited") }
                                     }
                                 }
@@ -122,6 +126,23 @@ fun SettingsScreen(
                                 "Dica: use um PNG com fundo transparente, carro de lado/¾ de frente.",
                                 color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
                             )
+                        }
+                    }
+                }
+            }
+            item {
+                Section("Cor de destaque") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        AccentTheme.entries.forEach { a ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { store.update { it.copy(accent = a) } }) {
+                                Box(
+                                    Modifier.size(44.dp).clip(CircleShape)
+                                        .background(Color(a.argb))
+                                        .border(BorderStroke(if (settings.accent == a) 3.dp else 0.dp, Glass.text), CircleShape),
+                                )
+                                Spacer(Modifier.size(6.dp))
+                                Text(a.label, color = if (settings.accent == a) Glass.text else Glass.textDim, style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
                 }
@@ -137,9 +158,9 @@ fun SettingsScreen(
                                 )
                                 Spacer(Modifier.size(6.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    GlassChip("Foto própria", Icons.Rounded.Image) { importTarget = m; pickScene.launch("image/*") }
+                                    GlassChip("Foto própria", Icons.Outlined.Image) { importTarget = m; pickScene.launch("image/*") }
                                     if (settings.customScenes[m] != null) {
-                                        GlassChip("", Icons.Rounded.Restore) {
+                                        GlassChip("", Icons.Outlined.Restore) {
                                             store.update { it.copy(customScenes = it.customScenes - m) }
                                         }
                                     }
@@ -222,10 +243,10 @@ fun SettingsScreen(
             }
             item {
                 Section("Sobre") {
-                    Text("AutoGlass Launcher 1.0", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Text("AutoGlass Launcher 1.1", color = Glass.text, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Foto do veículo: “22 Jeep Compass Limited” por HJUdall, Wikimedia Commons, CC0 (domínio público) — " +
-                            "recortada e repintada em branco. Ambientes ilustrados gerados para o app. " +
+                            "recortada e repintada em branco. Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
                             "Mapas © OpenStreetMap © CARTO. Tempo: Open-Meteo.com (CC BY 4.0). " +
                             "Jeep e Compass são marcas de seus respectivos donos; app pessoal sem vínculo com a fabricante.",
                         color = Glass.textDim,

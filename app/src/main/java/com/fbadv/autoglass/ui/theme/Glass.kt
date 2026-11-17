@@ -2,7 +2,6 @@ package com.fbadv.autoglass.ui.theme
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -33,32 +32,41 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+/**
+ * Paleta premium: grafite quase preto, textos em branco/cinza frio e uma
+ * única cor de destaque escolhida pelo usuário.
+ */
 object Glass {
-    val text = Color(0xFFF5F8FF)
-    val textDim = Color(0xB8E3EAFA)
-    val textFaint = Color(0x80D5DEF2)
-    val accent = Color(0xFF4DA3FF)
-    val accentSoft = Color(0x664DA3FF)
-    val warm = Color(0xFFFFB86B)
+    val text = Color(0xFFF3F5F8)
+    val textDim = Color(0xFF9BA3AE)
+    val textFaint = Color(0xFF5D6570)
+    val hairline = Color(0x14FFFFFF)
+    val surface = Color(0xFF0B0D11)
+    val warm = Color(0xFFE8C48F)
     val danger = Color(0xFFFF6B6B)
-    val fill = Color(0x1FFFFFFF)
-    val fillStrong = Color(0x33FFFFFF)
-    val stroke = Color(0x59FFFFFF)
-    val darkVeil = Color(0x99070B16)
-    val corner = 28.dp
+    val stroke = Color(0x1FFFFFFF)
+
+    private val accentState = mutableStateOf(Color(0xFF8ED1FF))
+    /** Cor de destaque atual (lida como estado: a interface recompõe ao trocar). */
+    var accent: Color
+        get() = accentState.value
+        set(v) { accentState.value = v }
+    val accentSoft: Color get() = accent.copy(alpha = 0.16f)
+
+    val corner = 22.dp
     val shape = RoundedCornerShape(corner)
-    val shapeSmall = RoundedCornerShape(18.dp)
+    val shapeSmall = RoundedCornerShape(14.dp)
 }
 
-/** Fundo desfocado compartilhado: cada painel de vidro desenha o trecho atrás dele. */
+/** Fundo desfocado compartilhado: cada painel desenha o trecho atrás dele. */
 class Backdrop(val image: ImageBitmap, val rootSize: IntSize)
 
 val LocalBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 
 /**
- * Efeito "liquid glass": recorta o fundo desfocado na posição do painel,
- * aplica um véu translúcido, brilho superior e borda em gradiente.
- * Funciona em qualquer versão do Android (não depende de RenderEffect).
+ * Painel "vidro fumê": recorta o fundo desfocado na posição do painel,
+ * escurece bastante (visual premium), aplica brilho fino no topo e
+ * borda hairline.
  */
 fun Modifier.glass(
     shape: Shape = Glass.shape,
@@ -86,61 +94,51 @@ fun Modifier.glass(
                     dstSize = IntSize(dw.roundToInt(), dh.roundToInt()),
                     filterQuality = FilterQuality.Low,
                 )
-            } else {
-                drawRect(Color(0xFF101828))
             }
+            // fumê escuro
+            drawRect(Color(0xFF07090C).copy(alpha = (0.62f / strength.coerceAtLeast(0.6f)).coerceIn(0.35f, 0.8f)))
             drawRect(
                 Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.20f * strength),
-                    0.35f to Color.White.copy(alpha = 0.09f * strength),
-                    1f to Color.White.copy(alpha = 0.05f * strength),
-                ),
-            )
-            // reflexo diagonal sutil
-            drawRect(
-                Brush.linearGradient(
-                    0f to Color.White.copy(alpha = 0.10f * strength),
-                    0.25f to Color.Transparent,
-                    start = Offset.Zero,
-                    end = Offset(size.width * 0.6f, size.height),
+                    0f to Color.White.copy(alpha = 0.055f * strength),
+                    0.5f to Color.White.copy(alpha = 0.015f * strength),
+                    1f to Color.Transparent,
                 ),
             )
         }
     if (!border) base else base.border(
         width = 1.dp,
-        brush = Brush.linearGradient(
-            0f to Color.White.copy(alpha = 0.55f),
-            0.45f to Color.White.copy(alpha = 0.08f),
-            1f to Color.White.copy(alpha = 0.28f),
+        brush = Brush.verticalGradient(
+            0f to Color.White.copy(alpha = 0.16f),
+            0.4f to Color.White.copy(alpha = 0.06f),
+            1f to Color.White.copy(alpha = 0.03f),
         ),
         shape = shape,
     )
 }
 
-private val scheme: ColorScheme = darkColorScheme(
-    primary = Glass.accent,
-    onPrimary = Color.White,
-    secondary = Glass.warm,
-    background = Color(0xFF070B16),
-    surface = Color(0xFF111A2C),
-    onSurface = Glass.text,
-    onBackground = Glass.text,
-    surfaceVariant = Color(0xFF1B2638),
-    onSurfaceVariant = Glass.textDim,
-)
-
 private val typography = Typography(
-    displayLarge = TextStyle(fontSize = 84.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp),
-    headlineMedium = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium),
-    bodyLarge = TextStyle(fontSize = 16.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+    displayLarge = TextStyle(fontSize = 96.sp, fontWeight = FontWeight.Thin, letterSpacing = (-1).sp),
+    headlineMedium = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Light),
+    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Normal),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Normal),
+    bodyLarge = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Light),
+    bodyMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Light),
+    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Normal, letterSpacing = 0.4.sp),
+    labelMedium = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp),
 )
 
 @Composable
 fun AutoGlassTheme(content: @Composable () -> Unit) {
+    val scheme = darkColorScheme(
+        primary = Glass.accent,
+        onPrimary = Color.Black,
+        secondary = Glass.warm,
+        background = Glass.surface,
+        surface = Color(0xFF13161B),
+        onSurface = Glass.text,
+        onBackground = Glass.text,
+        surfaceVariant = Color(0xFF1A1E24),
+        onSurfaceVariant = Glass.textDim,
+    )
     MaterialTheme(colorScheme = scheme, typography = typography, content = content)
 }

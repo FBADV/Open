@@ -18,6 +18,7 @@ import com.fbadv.autoglass.ui.Dashboard
 import com.fbadv.autoglass.ui.DashboardActions
 import com.fbadv.autoglass.ui.Images
 import com.fbadv.autoglass.ui.LauncherSurface
+import com.fbadv.autoglass.ui.NetworkState
 import com.fbadv.autoglass.ui.theme.AutoGlassTheme
 import com.fbadv.autoglass.weather.Weather
 import org.junit.Rule
@@ -41,11 +42,12 @@ class LauncherScreenshotTest(private val case: Case) {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases() = listOf(
-            Case("9pol_1024x600_estrada", 1024, 600, SceneMode.ESTRADA),
+            Case("9pol_1024x600_estudio", 1024, 600, SceneMode.ESTUDIO),
             Case("10pol_1280x720_dunas", 1280, 720, SceneMode.DUNAS),
             Case("10pol_1920x720_rua_wide", 1920, 720, SceneMode.RUA),
             Case("12pol_1920x1080_lama", 1920, 1080, SceneMode.LAMA, LivePanelMode.VIDEO),
             Case("13pol_2000x1200_estrada", 2000, 1200, SceneMode.ESTRADA),
+            Case("10pol_1920x720_estudio_wide", 1920, 720, SceneMode.ESTUDIO),
             Case("15pol_vertical_1080x1920_dunas", 1080, 1920, SceneMode.DUNAS),
         )
     }
@@ -80,10 +82,10 @@ class LauncherScreenshotTest(private val case: Case) {
         paparazzi.snapshot {
             CompositionLocalProvider(LocalInspectionMode provides true) {
             AutoGlassTheme {
-                LauncherSurface(blurred, 1f) {
+                LauncherSurface(sceneBmp.asImageBitmap(), blurred, 1f) {
                     Dashboard(
                         settings = Settings(scene = case.scene, livePanel = case.live),
-                        scene = sceneBmp.asImageBitmap(),
+                        network = NetworkState.WIFI,
                         vehicle = vehicle,
                         weather = Weather("Natal", 29.4, 31.0, 24.0, 1, true),
                         nowPlaying = NowPlaying(

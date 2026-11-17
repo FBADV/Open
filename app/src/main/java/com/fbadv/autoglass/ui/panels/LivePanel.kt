@@ -14,12 +14,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Map
-import androidx.compose.material.icons.rounded.OpenInFull
-import androidx.compose.material.icons.rounded.PictureInPicture
-import androidx.compose.material.icons.rounded.SmartDisplay
-import androidx.compose.material.icons.rounded.Widgets
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.OpenInFull
+import androidx.compose.material.icons.outlined.PictureInPicture
+import androidx.compose.material.icons.outlined.SmartDisplay
+import androidx.compose.material.icons.outlined.Widgets
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +40,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import com.fbadv.autoglass.ui.theme.Glass
 import com.fbadv.autoglass.data.LivePanelMode
-import com.fbadv.autoglass.ui.GlassChip
+import com.fbadv.autoglass.ui.TextTabs
 import com.fbadv.autoglass.ui.GlassIconButton
 import com.fbadv.autoglass.ui.theme.glass
 
@@ -61,44 +61,33 @@ fun LivePanel(
     modifier: Modifier = Modifier,
 ) {
     var bounds by remember { mutableStateOf<Rect?>(null) }
-    Column(modifier.glass().padding(10.dp)) {
+    Column(modifier.glass().padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                LivePanelMode.entries.forEach { m ->
-                    GlassChip(
-                        m.label,
-                        icon = when (m) {
-                            LivePanelMode.MAPA -> Icons.Rounded.Map
-                            LivePanelMode.VIDEO -> Icons.Rounded.SmartDisplay
-                            LivePanelMode.WIDGET -> Icons.Rounded.Widgets
-                        },
-                        selected = m == mode,
-                        onClick = { onModeChange(m) },
-                    )
-                }
-            }
+            TextTabs(
+                items = listOf("Mapa", "Vídeo", "Widget"),
+                selected = LivePanelMode.entries.indexOf(mode),
+                onSelect = { onModeChange(LivePanelMode.entries[it]) },
+                modifier = Modifier.weight(1f).padding(start = 6.dp),
+            )
             Spacer(Modifier.width(6.dp))
             if (mode == LivePanelMode.WIDGET && widgetId >= 0) {
-                GlassIconButton(Icons.Rounded.Edit, "Trocar widget", size = 40.dp, onClick = onPickWidget)
+                GlassIconButton(Icons.Outlined.Edit, "Trocar widget", size = 36.dp, onClick = onPickWidget)
                 Spacer(Modifier.width(6.dp))
             }
             if (freeform && mode != LivePanelMode.WIDGET) {
-                GlassIconButton(Icons.Rounded.PictureInPicture, "Abrir app em janela", size = 40.dp) {
+                GlassIconButton(Icons.Outlined.PictureInPicture, "Abrir app em janela", size = 36.dp) {
                     onExpand(mode, bounds)
                 }
                 Spacer(Modifier.width(6.dp))
             }
-            GlassIconButton(Icons.Rounded.OpenInFull, "Tela cheia", size = 40.dp) { onExpand(mode, null) }
+            GlassIconButton(Icons.Outlined.OpenInFull, "Tela cheia", size = 36.dp) { onExpand(mode, null) }
         }
         Spacer(Modifier.padding(top = 8.dp))
         Box(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .onGloballyPositioned {
                     val b = it.boundsInWindow()
                     bounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())

@@ -1,7 +1,6 @@
 package com.fbadv.autoglass.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,234 +9,232 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Grain
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.NearMe
-import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.Terrain
-import androidx.compose.material.icons.rounded.Thunderstorm
-import androidx.compose.material.icons.rounded.Umbrella
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material.icons.rounded.WbCloudy
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.AddRoad
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.AcUnit
+import androidx.compose.material.icons.outlined.AddRoad
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Grain
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.LocationCity
+import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Terrain
+import androidx.compose.material.icons.outlined.Thunderstorm
+import androidx.compose.material.icons.outlined.Umbrella
+import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material.icons.outlined.WbCloudy
+import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material.icons.outlined.Garage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fbadv.autoglass.data.SceneMode
-import com.fbadv.autoglass.weather.Weather
 import com.fbadv.autoglass.ui.theme.Glass
+import com.fbadv.autoglass.weather.Weather
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.roundToInt
 
 fun sceneIcon(mode: SceneMode): ImageVector = when (mode) {
-    SceneMode.RUA -> Icons.Rounded.LocationCity
-    SceneMode.DUNAS -> Icons.Rounded.Terrain
-    SceneMode.ESTRADA -> Icons.Rounded.AddRoad
-    SceneMode.LAMA -> Icons.Rounded.WaterDrop
+    SceneMode.ESTUDIO -> Icons.Outlined.Garage
+    SceneMode.RUA -> Icons.Outlined.LocationCity
+    SceneMode.DUNAS -> Icons.Outlined.Terrain
+    SceneMode.ESTRADA -> Icons.Outlined.AddRoad
+    SceneMode.LAMA -> Icons.Outlined.WaterDrop
 }
 
 fun weatherIcon(w: Weather?): ImageVector = when (w?.code) {
-    null -> Icons.Rounded.WbCloudy
-    0, 1 -> if (w.isDay) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    2 -> Icons.Rounded.WbCloudy
-    3, 45, 48 -> Icons.Rounded.Cloud
-    51, 53, 55, 56, 57 -> Icons.Rounded.Grain
-    61, 63, 65, 66, 67, 80, 81, 82 -> Icons.Rounded.Umbrella
-    71, 73, 75, 77, 85, 86 -> Icons.Rounded.AcUnit
-    95, 96, 99 -> Icons.Rounded.Thunderstorm
-    else -> Icons.Rounded.WbCloudy
+    null -> Icons.Outlined.WbCloudy
+    0, 1 -> if (w.isDay) Icons.Outlined.WbSunny else Icons.Outlined.NightsStay
+    2 -> Icons.Outlined.WbCloudy
+    3, 45, 48 -> Icons.Outlined.Cloud
+    51, 53, 55, 56, 57 -> Icons.Outlined.Grain
+    61, 63, 65, 66, 67, 80, 81, 82 -> Icons.Outlined.Umbrella
+    71, 73, 75, 77, 85, 86 -> Icons.Outlined.AcUnit
+    95, 96, 99 -> Icons.Outlined.Thunderstorm
+    else -> Icons.Outlined.LightMode
 }
 
 /**
- * Cartão principal: o veículo sobre o ambiente escolhido (rua, dunas,
- * estrada, lama), com relógio, data e previsão do tempo.
+ * Palco do veículo (estilo centrais premium): relógio fino, nome do modelo,
+ * o carro sobre o piso do ambiente com reflexo, sombra de contato e luz de
+ * destaque, e o seletor de ambiente.
  */
 @Composable
-fun VehicleHero(
-    scene: ImageBitmap?,
-    sceneMode: SceneMode,
+fun VehicleStage(
     vehicle: ImageBitmap?,
+    sceneMode: SceneMode,
     vehicleName: String,
     vehicleTrim: String,
-    weather: Weather?,
     clock24h: Boolean,
     onSceneChange: (SceneMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(
-        modifier
-            .clip(Glass.shape)
-            .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(0.5f), Color.White.copy(0.06f), Color.White.copy(0.25f))), Glass.shape),
-    ) {
-        val compact = maxHeight < 340.dp || maxWidth < 480.dp
-        val narrow = maxWidth < 560.dp
-        val wide = maxWidth / maxHeight >= 1.9f
-        // o carro fica à direita e acima do seletor de ambiente, sem cobrir o relógio
+    BoxWithConstraints(modifier) {
+        val compact = maxHeight < 380.dp
         val carAspect = vehicle?.let { it.width.toFloat() / it.height } ?: 1.75f
-        val chipsSpace = if (compact) 58.dp else 72.dp
-        val carW = minOf(maxWidth * (if (wide) 0.62f else 0.58f), (maxHeight - chipsSpace) * 0.70f * carAspect)
-        val textW = if (wide) maxWidth * 0.40f else maxWidth * 0.46f
-        Crossfade(scene, animationSpec = tween(600), label = "scene") { img ->
-            if (img != null) Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            else Box(Modifier.fillMaxSize())
-        }
-        // véus para leitura do texto
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(0f to Color(0xCC050914), 0.45f to Color(0x55050914), 1f to Color.Transparent),
-            ),
-        )
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color(0x99050914))))
+        val selectorSpace = if (compact) 44.dp else 56.dp
+        val wideStage = maxWidth / maxHeight > 1.8f
+        val carW = minOf(maxWidth * (if (wideStage) 0.62f else 0.9f), (maxHeight - selectorSpace) * (if (wideStage) 0.80f else 0.68f) * carAspect)
+        val carShiftX = if (wideStage) maxWidth * 0.10f else 0.dp
+        val carH = carW / carAspect
 
-        // veículo
+        // luz de destaque atrás do carro
+        Canvas(Modifier.fillMaxSize()) {
+            val cx = size.width * 0.5f + carShiftX.toPx()
+            val floorY = size.height - selectorSpace.toPx() - carH.toPx() * 0.06f
+            val r = carW.toPx() * 0.75f
+            val c = Offset(cx, floorY - carH.toPx() * 0.40f)
+            drawCircle(
+                Brush.radialGradient(
+                    0f to Glass.accent.copy(alpha = 0.14f), 0.55f to Glass.accent.copy(alpha = 0.04f), 1f to Color.Transparent,
+                    center = c, radius = r,
+                ),
+                radius = r, center = c,
+            )
+            // linha de luz no piso
+            drawRect(
+                Brush.horizontalGradient(
+                    0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.10f), 1f to Color.Transparent,
+                ),
+                topLeft = Offset(cx - carW.toPx() * 0.7f, floorY),
+                size = Size(carW.toPx() * 1.4f, 1.5f),
+            )
+        }
+
+        // carro + reflexo
         AnimatedContent(
-            targetState = sceneMode to vehicle,
-            transitionSpec = {
-                (slideInHorizontally(tween(700)) { it / 3 } + fadeIn(tween(500))) togetherWith fadeOut(tween(250))
-            },
+            targetState = vehicle,
+            transitionSpec = { (slideInHorizontally(tween(800)) { it / 4 } + fadeIn(tween(600))) togetherWith fadeOut(tween(200)) },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = maxWidth * 0.02f, bottom = chipsSpace - 8.dp)
-                .width(carW),
+                .align(Alignment.BottomCenter)
+                .offset(x = carShiftX, y = carH * 0.30f - selectorSpace)
+                .width(carW)
+                .height(carH * 1.30f),
             label = "vehicle",
-        ) { (_, v) ->
-            if (v != null) {
-                Box(Modifier.fillMaxWidth().aspectRatio(v.width.toFloat() / v.height)) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        // sombra de contato sob o carro
-                        val h = size.height * 0.16f
-                        drawOval(
-                            brush = Brush.radialGradient(
-                                listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent),
-                                center = Offset(size.width * 0.5f, size.height * 0.93f),
-                                radius = size.width * 0.5f,
-                            ),
-                            topLeft = Offset(size.width * 0.02f, size.height * 0.93f - h / 2),
-                            size = Size(size.width * 0.96f, h),
-                        )
-                    }
-                    Image(v, vehicleName, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                }
-            }
-        }
-
-        // relógio + tempo
-        val now = rememberNow()
-        Column(Modifier.align(Alignment.TopStart).padding(if (compact) 16.dp else 24.dp).width(textW)) {
-            val time = SimpleDateFormat(if (clock24h) "HH:mm" else "h:mm", Locale("pt", "BR")).format(Date(now))
-            Text(
-                time,
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = if (compact) 56.sp else 84.sp),
-                color = Glass.text,
-            )
-            Text(
-                SimpleDateFormat(if (compact) "EEE, d 'de' MMM" else "EEEE, d 'de' MMMM", Locale("pt", "BR")).format(Date(now))
-                    .replaceFirstChar { it.uppercase() },
-                style = MaterialTheme.typography.titleMedium,
-                color = Glass.textDim,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(weatherIcon(weather), null, tint = Glass.warm, modifier = Modifier.size(if (compact) 30.dp else 40.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    weather?.let { "${it.temperature.roundToInt()}°" } ?: "--°",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = if (compact) 28.sp else 36.sp, fontWeight = FontWeight.Light),
-                    color = Glass.text,
-                )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            weather?.city ?: "Buscando localização…",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Glass.text,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Icon(Icons.Rounded.NearMe, null, tint = Glass.textDim, modifier = Modifier.padding(start = 4.dp).size(14.dp))
-                    }
-                    Text(
-                        weather?.let { "${it.description} · Máx ${it.max.roundToInt()}° Mín ${it.min.roundToInt()}°" } ?: "Previsão indisponível",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Glass.textDim,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+        ) { v ->
+            if (v != null) Box(Modifier.fillMaxSize()) {
+                // reflexo no piso
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(carH * 0.30f)
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.30f), 1f to Color.Transparent),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        },
+                ) {
+                    Image(
+                        v, null,
+                        Modifier.fillMaxWidth().height(carH).graphicsLayer { scaleY = -1f; translationY = -carH.toPx() * 0.0f },
+                        contentScale = ContentScale.FillBounds,
+                        alignment = Alignment.TopCenter,
                     )
                 }
+                // sombra de contato
+                Canvas(Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter)) {
+                    val h = size.height * 0.12f
+                    drawOval(
+                        Brush.radialGradient(
+                            listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent),
+                            center = Offset(size.width * 0.5f, size.height * 0.95f),
+                            radius = size.width * 0.52f,
+                        ),
+                        topLeft = Offset(size.width * 0.0f, size.height * 0.95f - h / 2),
+                        size = Size(size.width, h),
+                    )
+                }
+                Image(
+                    v, vehicleName,
+                    Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter),
+                    contentScale = ContentScale.Fit,
+                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(0.97f, 0.98f, 1f, 1f) }),
+                )
             }
         }
 
-        // nome do veículo
-        Column(
-            Modifier.align(Alignment.TopEnd).padding(if (compact) 16.dp else 24.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
+        // relógio
+        val now = rememberNow()
+        Column(Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 4.dp)) {
             Text(
-                vehicleName.uppercase(),
+                SimpleDateFormat(if (clock24h) "HH:mm" else "h:mm", Locale("pt", "BR")).format(Date(now)),
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = if (compact) 64.sp else 92.sp),
                 color = Glass.text,
-                fontSize = if (compact) 22.sp else 30.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(26.dp).height(3.dp).background(Brush.horizontalGradient(listOf(Glass.accent, Glass.warm))))
-                Spacer(Modifier.width(8.dp))
-                Text(vehicleTrim.uppercase(), color = Glass.textDim, fontSize = 13.sp, letterSpacing = 3.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                SimpleDateFormat("EEEE · d 'de' MMMM", Locale("pt", "BR")).format(Date(now)).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = Glass.textDim,
+            )
+            if (wideStage) {
+                Spacer(Modifier.height(18.dp))
+                VehicleName(vehicleName, vehicleTrim, compact, Alignment.Start)
             }
+        }
+
+        if (!wideStage) Box(Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 14.dp)) {
+            VehicleName(vehicleName, vehicleTrim, compact, Alignment.End)
         }
 
         // seletor de ambiente
-        Row(
-            Modifier.align(Alignment.BottomStart).padding(if (compact) 12.dp else 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SceneMode.entries.forEach { m ->
-                GlassChip(
-                    text = if (narrow && m != sceneMode) "" else m.label,
-                    icon = sceneIcon(m),
-                    selected = m == sceneMode,
-                    onClick = { onSceneChange(m) },
-                )
+        TextTabs(
+            items = SceneMode.entries.map { it.label },
+            selected = SceneMode.entries.indexOf(sceneMode),
+            onSelect = { onSceneChange(SceneMode.entries[it]) },
+            modifier = Modifier.align(Alignment.BottomCenter).offset(x = carShiftX).padding(bottom = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun VehicleName(vehicleName: String, vehicleTrim: String, compact: Boolean, align: Alignment.Horizontal) {
+        Column(horizontalAlignment = align) {
+            Text(
+                vehicleName.uppercase(),
+                color = Glass.text,
+                fontSize = if (compact) 18.sp else 24.sp,
+                fontWeight = FontWeight.Light,
+                letterSpacing = 9.sp,
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(18.dp).height(1.dp).background(Glass.accent))
+                Spacer(Modifier.width(8.dp))
+                Text(vehicleTrim.uppercase(), color = Glass.textDim, fontSize = 11.sp, letterSpacing = 4.sp)
             }
         }
-    }
 }

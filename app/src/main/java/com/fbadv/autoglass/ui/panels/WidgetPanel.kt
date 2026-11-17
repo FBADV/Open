@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Widgets
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,7 +64,7 @@ fun WidgetPanel(widgetId: Int, onRequestPick: () -> Unit, modifier: Modifier = M
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Rounded.Widgets, null, tint = Glass.textDim, modifier = Modifier.size(48.dp))
+            Icon(Icons.Outlined.Widgets, null, tint = Glass.textDim, modifier = Modifier.size(48.dp))
             Spacer(Modifier.size(10.dp))
             Text("Nenhum widget escolhido", color = Glass.text, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -74,7 +74,7 @@ fun WidgetPanel(widgetId: Int, onRequestPick: () -> Unit, modifier: Modifier = M
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
             )
             Spacer(Modifier.size(8.dp))
-            GlassChip("Escolher widget", Icons.Rounded.Widgets, selected = true, onClick = onRequestPick)
+            GlassChip("Escolher widget", Icons.Outlined.Widgets, selected = true, onClick = onRequestPick)
         }
         return
     }
