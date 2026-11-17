@@ -53,6 +53,9 @@ object Glass {
         set(v) { accentState.value = v }
     val accentSoft: Color get() = accent.copy(alpha = 0.16f)
 
+    /** Sombra suave para textos sobre o ambiente (legível em fundos claros). */
+    val textShadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 1f), 10f)
+
     val corner = 22.dp
     val shape = RoundedCornerShape(corner)
     val shapeSmall = RoundedCornerShape(14.dp)

@@ -20,13 +20,19 @@ import android.view.WindowManager
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.fbadv.autoglass.AutoGlassApp
 import com.fbadv.autoglass.MainActivity
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import com.fbadv.autoglass.R
 import kotlin.math.abs
 
 /**
- * Botão flutuante (estilo vidro) que fica sobre os outros apps e traz o
- * launcher de volta com um toque — útil em centrais sem botão "Home" físico.
+ * Serviço permanente do AutoGlass:
+ *  - abre o launcher quando a central liga/acorda (tela acende após ficar apagada);
+ *  - opcionalmente mostra o botão Home flutuante sobre os outros apps.
  */
 class HomeBubbleService : Service() {
     private var wm: WindowManager? = null
@@ -39,20 +45,47 @@ class HomeBubbleService : Service() {
         super.onCreate()
         instance = this
         startAsForeground()
-        if (Settings.canDrawOverlays(this)) addBubble()
+        val s = AutoGlassApp.instance.settings.value
+        if (s.homeBubble && Settings.canDrawOverlays(this)) addBubble()
+        registerScreenReceiver()
+    }
+
+    private var screenOffAt = 0L
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            when (i.action) {
+                Intent.ACTION_SCREEN_OFF -> screenOffAt = SystemClock.elapsedRealtime()
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
+                    val wasOffLong = screenOffAt > 0 && SystemClock.elapsedRealtime() - screenOffAt > 20_000
+                    if (wasOffLong && AutoGlassApp.instance.settings.value.autoStart) {
+                        screenOffAt = 0
+                        goHome(c)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun registerScreenReceiver() {
+        val f = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(this, screenReceiver, f, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun startAsForeground() {
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Botão Home flutuante", NotificationManager.IMPORTANCE_MIN),
+                NotificationChannel(CHANNEL, "AutoGlass em segundo plano", NotificationManager.IMPORTANCE_MIN),
             )
         }
         val n: Notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_bubble_home)
             .setContentTitle("AutoGlass")
-            .setContentText("Botão Home flutuante ativo")
+            .setContentText("Tela inicial ativa")
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
@@ -124,6 +157,7 @@ class HomeBubbleService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(screenReceiver) }
         runCatching { bubble?.let { wm?.removeView(it) } }
         bubble = null
         instance = null
@@ -136,14 +170,22 @@ class HomeBubbleService : Service() {
             private set
 
         fun goHome(context: Context) {
-            context.startActivity(
-                Intent(context, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
-            )
+            runCatching {
+                context.startActivity(
+                    Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
+                )
+            }
+        }
+
+        /** Liga ou desliga o serviço conforme as opções (abrir ao ligar / botão flutuante). */
+        fun refresh(context: Context) {
+            val s = AutoGlassApp.instance.settings.value
+            stop(context)
+            if (s.autoStart || s.homeBubble) start(context)
         }
 
         fun start(context: Context) {
-            if (!Settings.canDrawOverlays(context)) return
             val i = Intent(context, HomeBubbleService::class.java)
             runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(i) else context.startService(i)

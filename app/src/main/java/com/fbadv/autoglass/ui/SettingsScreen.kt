@@ -55,6 +55,7 @@ import com.fbadv.autoglass.AutoGlassApp
 import com.fbadv.autoglass.data.AppEntry
 import com.fbadv.autoglass.data.AppRole
 import com.fbadv.autoglass.data.AccentTheme
+import com.fbadv.autoglass.data.LightingMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
@@ -149,6 +150,19 @@ fun SettingsScreen(
             }
             item {
                 Section("Ambiente do veículo") {
+                    Text("Iluminação", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LightingMode.entries.forEach { m ->
+                            GlassChip(m.label, selected = settings.lighting == m) { store.update { it.copy(lighting = m) } }
+                        }
+                    }
+                    Text(
+                        "Automática: versão de dia ou de noite de cada ambiente conforme o nascer e o pôr do sol; o carro recebe a luz do ambiente.",
+                        color = Glass.textFaint, style = MaterialTheme.typography.bodyMedium,
+                    )
+                    SettingSwitch("Efeito de chuva", "Chuva animada sobre o ambiente quando estiver chovendo no local", settings.rainEffect) { v ->
+                        store.update { it.copy(rainEffect = v) }
+                    }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(SceneMode.entries) { m ->
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -226,28 +240,41 @@ fun SettingsScreen(
                             locationPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                         },
                     )
+                    val isHome = remember(settings) { AppLauncher.isDefaultHome(context) }
+                    SettingRow(
+                        "Tela inicial padrão",
+                        if (isHome) "Sim — o AutoGlass abre ao ligar a central e ao tocar em Home"
+                        else "Não — toque para tornar o AutoGlass a tela principal",
+                        onClick = { AppLauncher.start(context, AppLauncher.defaultHomeRequest(context)) },
+                    )
+                    SettingSwitch(
+                        "Abrir ao ligar a central",
+                        "Traz o AutoGlass para a frente quando a central liga ou acorda. No Android 10+ requer “Sobrepor a outros apps”.",
+                        settings.autoStart,
+                    ) { v ->
+                        store.update { it.copy(autoStart = v) }
+                        if (v && !AndroidSettings.canDrawOverlays(context)) AppLauncher.openOverlaySettings(context)
+                        HomeBubbleService.refresh(context)
+                    }
                     SettingSwitch(
                         "Botão Home flutuante",
                         "Bolha sobre os outros apps para voltar ao launcher com um toque",
                         settings.homeBubble,
                     ) { v ->
                         store.update { it.copy(homeBubble = v) }
-                        if (v) {
-                            if (!AndroidSettings.canDrawOverlays(context)) AppLauncher.openOverlaySettings(context)
-                            else HomeBubbleService.start(context)
-                        } else HomeBubbleService.stop(context)
+                        if (v && !AndroidSettings.canDrawOverlays(context)) AppLauncher.openOverlaySettings(context)
+                        HomeBubbleService.refresh(context)
                     }
-                    SettingRow("Definir como tela inicial padrão", "Escolha AutoGlass como app de início", onClick = { AppLauncher.openHomeSettings(context) })
                     SettingRow("Configurações do Android", null, onClick = { AppLauncher.openSystemSettings(context) })
                 }
             }
             item {
                 Section("Sobre") {
-                    Text("AutoGlass Launcher 1.1", color = Glass.text, style = MaterialTheme.typography.titleMedium)
+                    Text("AutoGlass Launcher 1.2", color = Glass.text, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Foto do veículo: “22 Jeep Compass Limited” por HJUdall, Wikimedia Commons, CC0 (domínio público) — " +
                             "recortada e repintada em branco. Ambientes (Estúdio, Rua, Dunas, Estrada, Lama) gerados para o app. " +
-                            "Mapas © OpenStreetMap © CARTO. Tempo: Open-Meteo.com (CC BY 4.0). " +
+                            "Mapas © OpenStreetMap (sem chave de API). Tempo: Open-Meteo.com (CC BY 4.0). " +
                             "Jeep e Compass são marcas de seus respectivos donos; app pessoal sem vínculo com a fabricante.",
                         color = Glass.textDim,
                         style = MaterialTheme.typography.bodyMedium,

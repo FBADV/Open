@@ -73,8 +73,9 @@ fun LauncherRoot(screen: MutableState<Screen>) {
     val weather by app.weather.weather.collectAsStateWithLifecycle()
 
     val customScene = settings.customScenes[settings.scene]
-    val sceneBmp by produceState<android.graphics.Bitmap?>(null, settings.scene, customScene) {
-        value = withContext(Dispatchers.IO) { Images.loadScene(context, settings.scene, customScene) }
+    val isDay = rememberIsDay(settings.lighting, weather)
+    val sceneBmp by produceState<android.graphics.Bitmap?>(null, settings.scene, customScene, isDay) {
+        value = withContext(Dispatchers.IO) { Images.loadScene(context, settings.scene, customScene, isDay) }
     }
     val scene: ImageBitmap? = remember(sceneBmp) { sceneBmp?.asImageBitmap() }
     val blurred by produceState<ImageBitmap?>(null, sceneBmp) {
@@ -129,7 +130,8 @@ fun LauncherRoot(screen: MutableState<Screen>) {
 
     SideEffect { Glass.accent = Color(settings.accent.argb) }
     val network = rememberNetworkState()
-    LauncherSurface(scene, blurred, settings.uiScale, dimForOverlay = screen.value != Screen.HOME) {
+    val rain = settings.rainEffect && isRaining(weather)
+    LauncherSurface(scene, blurred, settings.uiScale, dimForOverlay = screen.value != Screen.HOME, rain = if (rain) rainIntensity(weather) else 0f) {
                 AnimatedContent(
                     targetState = screen.value,
                     transitionSpec = { (fadeIn(tween(250)) + scaleIn(tween(250), initialScale = 0.97f)) togetherWith fadeOut(tween(150)) },
@@ -139,6 +141,7 @@ fun LauncherRoot(screen: MutableState<Screen>) {
                         Screen.HOME -> Dashboard(
                             settings = settings,
                             network = network,
+                            night = !isDay,
                             vehicle = vehicle,
                             weather = weather,
                             nowPlaying = nowPlaying,
@@ -204,6 +207,7 @@ fun LauncherSurface(
     blurred: ImageBitmap?,
     uiScale: Float,
     dimForOverlay: Boolean = false,
+    rain: Float = 0f,
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Glass.surface)) {
@@ -225,9 +229,10 @@ fun LauncherSurface(
                 )
                 Box(
                     Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(0f to Color(0x66050608), 0.25f to Color.Transparent, 0.55f to Color.Transparent, 1f to Color(0x99050608)),
+                        Brush.horizontalGradient(0f to Color(0x8C050608), 0.32f to Color(0x1A050608), 0.55f to Color.Transparent, 1f to Color(0x99050608)),
                     ),
                 )
+                if (rain > 0f) RainOverlay(rain)
                 if (dimForOverlay) Box(Modifier.fillMaxSize().background(Color(0xB3050608)))
                 content()
             }
@@ -261,6 +266,7 @@ class DashboardActions(
 fun Dashboard(
     settings: com.fbadv.autoglass.data.Settings,
     network: NetworkState,
+    night: Boolean,
     vehicle: ImageBitmap?,
     weather: com.fbadv.autoglass.weather.Weather?,
     nowPlaying: com.fbadv.autoglass.media.NowPlaying?,
@@ -288,6 +294,7 @@ fun Dashboard(
             vehicleName = settings.vehicleName,
             vehicleTrim = settings.vehicleTrim,
             clock24h = settings.clock24h,
+            night = night,
             onSceneChange = actions.setScene,
             modifier = m,
         )

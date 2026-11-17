@@ -86,6 +86,24 @@ object AppLauncher {
         if (!start(context, Intent(Settings.ACTION_HOME_SETTINGS))) openSystemSettings(context)
     }
 
+    /** O AutoGlass é o app de tela inicial (HOME) padrão? */
+    fun isDefaultHome(context: Context): Boolean {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val r = context.packageManager.resolveActivity(home, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return r?.activityInfo?.packageName == context.packageName
+    }
+
+    /** Intent do sistema que pede para tornar o AutoGlass a tela inicial padrão. */
+    fun defaultHomeRequest(context: Context): Intent {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val rm = context.getSystemService(android.app.role.RoleManager::class.java)
+            if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)) {
+                return rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
+            }
+        }
+        return Intent(Settings.ACTION_HOME_SETTINGS)
+    }
+
     fun openOverlaySettings(context: Context) {
         start(context, Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")))
     }

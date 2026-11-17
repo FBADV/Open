@@ -210,8 +210,8 @@ fun TextTabs(items: List<String>, selected: Int, onSelect: (Int) -> Unit, modifi
             ) {
                 Text(
                     t.uppercase(),
-                    color = if (i == selected) Glass.text else Glass.textFaint,
-                    style = MaterialTheme.typography.labelMedium,
+                    color = if (i == selected) Glass.text else Glass.text.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelMedium.copy(shadow = Glass.textShadow),
                 )
                 Spacer(Modifier.height(5.dp))
                 Box(

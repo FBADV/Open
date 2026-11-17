@@ -126,3 +126,80 @@ def lama():
     finish(img,"p_scene_lama.jpg",(0.96,1.0,0.98))
 
 for f in (estudio,rua,estrada,dunas,lama): f()
+
+# ======================= versões de DIA =======================
+def estudio_dia():
+    img=grad([(0,(150,154,160)),(HZ,(200,203,208)),(HZ+0.001,(176,178,182)),(1,(120,122,126))],yn)
+    img=glow(img,W*0.42,H*0.20,W*0.35,H*0.5,(255,255,255),0.25)
+    img=glow(img,W*0.42,H*0.80,W*0.35,H*0.12,(255,255,255),0.18)
+    lines=np.zeros_like(img)
+    for x0 in [0.12,0.42,0.72]:
+        m=(np.abs(xn-x0)<0.11)&(np.abs(yn-0.035)<0.004); lines[m]=c(255,255,255)
+    img=img+blur(lines,3)*0.5+blur(lines,30)*0.5
+    img=floor_reflect(img,0.18,14)
+    finish(img,"p_scene_estudio_dia.jpg")
+
+def rua_dia():
+    img=grad([(0,(110,150,200)),(0.45,(170,195,220)),(HZ,(205,210,215)),(HZ+0.001,(90,92,98)),(1,(50,52,56))],yn)
+    r=np.random.default_rng(15); sk=np.zeros((H,W),np.float32); x=0
+    tones=np.zeros_like(img)
+    while x<W:
+        bw=int(r.integers(80,220)); bh=int(r.integers(160,460)); top=int(H*HZ)-bh
+        tone=r.uniform(0.45,0.75)
+        tones[top:int(H*HZ),x:x+bw]=c(150,160,175)*tone+c(255,255,255)*0.05
+        for wy in range(top+10,int(H*HZ)-8,22):   # faixas de janelas (reflexo do céu)
+            tones[wy:wy+8,x+6:x+bw-6]+=c(60,80,110)*r.uniform(0.1,0.35)
+        sk[top:int(H*HZ),x:x+bw]=1; x+=bw+int(r.integers(4,30))
+    m=blur(sk,16)[...,None]; img=img*(1-m)+blur(tones,16)*m
+    img=glow(img,W*0.3,H*0.2,W*0.4,H*0.3,(255,250,235),0.25)
+    img=floor_reflect(img,0.30,8)
+    finish(img,"p_scene_rua_dia.jpg")
+
+def estrada_dia():
+    img=grad([(0,(70,120,190)),(0.45,(150,190,230)),(HZ,(215,225,235)),(HZ+0.001,(80,80,82)),(1,(45,45,48))],yn)
+    cl=np.clip(noise(120,40)*1.4-0.65,0,1)*(yn<0.5); img=img+blur(cl,20)[...,None]*0.35
+    for i,(b,a,col,p,bl) in enumerate([(0.585,0.07,(120,140,160),260,6),(0.61,0.05,(80,95,105),170,3)]):
+        rd=ridge(b,a,p,20+i); m=(Y>rd[None,:])&(Y<H*HZ)
+        lay=np.zeros_like(img); lay[m]=c(*col); mm=blur(m.astype(np.float32),bl)[...,None]
+        img=img*(1-mm)+blur(lay,bl)*mm
+    vx,vy=W*0.45,H*HZ; tt=np.clip((Y-vy)/(H-vy),0,1)
+    side=(Y>vy)&(np.abs(X-vx)>(W*0.75)*tt); img[side]=img[side]*0.0+c(90,100,70)[None]*(0.7+0.3*tt[side][:,None])
+    for xb,dash in [(-600,False),(2500,False),(960,True)]:
+        lx=vx+(xb-vx)*tt; w=1+18*tt; on=(np.sin(1/(tt+0.02)*2.2)>0.1) if dash else True
+        m=(Y>vy+2)&(np.abs(X-lx)<w)&on; img[m]=img[m]*0.3+c(235,235,230)*0.7
+    img=floor_reflect(img,0.08,10)
+    finish(img,"p_scene_estrada_dia.jpg")
+
+def dunas_dia():
+    img=grad([(0,(60,120,200)),(0.45,(150,195,235)),(HZ,(240,225,200)),(1,(240,225,200))],yn)
+    img=glow(img,W*0.75,H*0.18,W*0.12,H*0.1,(255,255,240),0.6)
+    layers=[(0.60,0.06,(236,200,150),(190,140,95),300,31),(0.66,0.09,(240,205,155),(185,132,88),380,32),(0.76,0.12,(244,210,160),(175,124,80),460,33),(0.90,0.12,(238,200,150),(160,110,70),520,34)]
+    for i,(b,a,lit,sh,p,s) in enumerate(layers):
+        rd=ridge(b,a,p,s,1.6); m=Y>rd[None,:]
+        slope=np.gradient(rd); sd=np.clip(0.5-slope[None,:]*1.4,0,1)
+        col=c(*sh)+(c(*lit)-c(*sh))*sd[...,None]
+        depth=np.clip((Y-rd[None,:])/(H*0.18),0,1)[...,None]
+        col=col*(1-0.2*depth)
+        img=np.where(m[...,None],col,img)
+        if i<2: img=blur(img,1.5)
+    finish(img,"p_scene_dunas_dia.jpg")
+
+def lama_dia():
+    img=grad([(0,(150,165,170)),(0.45,(185,195,195)),(HZ,(170,180,170)),(HZ+0.001,(80,68,52)),(1,(40,32,24))],yn)
+    r=np.random.default_rng(9)
+    for li,(base,col,hmin,hmax,cnt,bl) in enumerate([(0.60,(110,130,120),120,260,140,9),(0.62,(70,90,75),160,340,90,4),(0.645,(40,55,42),220,460,40,5)]):
+        lay=np.zeros((H,W),np.float32)
+        for _ in range(cnt):
+            x=r.uniform(-50,W+50); h=r.uniform(hmin,hmax); w=h*r.uniform(0.22,0.32); yb=H*base
+            cv2.fillPoly(lay,[np.array([[x,yb-h],[x-w/2,yb],[x+w/2,yb]],np.int32)],1)
+        lay[int(H*base):]=1; lay=blur(lay,bl)[...,None]; img=img*(1-lay)+c(*col)*lay
+    img=img+np.exp(-((yn-0.60)/0.05)**2)[...,None]*c(200,210,205)*0.3
+    g=Y>H*HZ; n=noise(30,4)*0.6+noise(8,5)*0.4
+    mud=grad([(0,(95,78,58)),(1,(45,36,26))],np.clip((yn-HZ)/(1-HZ),0,1))*(0.8+0.4*n[...,None])
+    img=np.where(g[...,None],mud,img)
+    pud=(cv2.resize(noise(70,6),(W*3,H))[:, W:2*W]>0.74)&g; pm=blur(pud.astype(np.float32),2)[...,None]
+    sky=img.copy(); hz=int(H*HZ); h=H-hz; sky[hz:]=blur(img[hz-h:hz][::-1],6)*0.85
+    img=img*(1-pm)+sky*pm
+    finish(img,"p_scene_lama_dia.jpg")
+
+for f in (estudio_dia,rua_dia,estrada_dia,dunas_dia,lama_dia): f()

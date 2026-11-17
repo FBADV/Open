@@ -17,8 +17,8 @@ object KnownApps {
         "com.mapswithme.maps.pro",
     )
     val MUSIC = listOf(
-        "com.spotify.music",
         "com.google.android.apps.youtube.music",
+        "com.spotify.music",
         "deezer.android.app",
         "com.amazon.mp3",
         "com.apple.android.music",
@@ -83,7 +83,8 @@ object KnownApps {
 
     fun packagesFor(role: AppRole): List<String> = when (role) {
         AppRole.NAVIGATION -> NAVIGATION
-        AppRole.MUSIC -> MUSIC
+        // YouTube Music (YouTube Premium) primeiro; sem ele, o próprio YouTube
+        AppRole.MUSIC -> listOf(MUSIC.first(), YOUTUBE) + MUSIC.drop(1)
         AppRole.RADIO -> RADIO
         AppRole.PLAYER -> PLAYER
         AppRole.VIDEO -> VIDEO

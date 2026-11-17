@@ -29,32 +29,47 @@ import com.fbadv.autoglass.ui.theme.Glass
 import com.fbadv.autoglass.ui.theme.glass
 import androidx.compose.foundation.shape.RoundedCornerShape
 import org.osmdroid.tileprovider.tilesource.ITileSource
-import org.osmdroid.tileprovider.tilesource.XYTileSource
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
-private val DARK: ITileSource = XYTileSource(
-    "CartoDark", 0, 19, 256, ".png",
-    arrayOf(
-        "https://a.basemaps.cartocdn.com/dark_all/",
-        "https://b.basemaps.cartocdn.com/dark_all/",
-        "https://c.basemaps.cartocdn.com/dark_all/",
-    ),
-    "© OpenStreetMap © CARTO",
-)
+/**
+ * Mapa base do OpenStreetMap: gratuito e sem chave de API.
+ * O modo escuro é feito com um filtro de cor (inverte e esfria o mapa claro).
+ */
+private val OSM: ITileSource = TileSourceFactory.MAPNIK
 
-private val LIGHT: ITileSource = XYTileSource(
-    "CartoVoyager", 0, 19, 256, ".png",
-    arrayOf(
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/",
-    ),
-    "© OpenStreetMap © CARTO",
-)
+private fun darkFilter(): ColorMatrixColorFilter {
+    val invert = ColorMatrix(floatArrayOf(
+        -1f, 0f, 0f, 0f, 255f,
+        0f, -1f, 0f, 0f, 255f,
+        0f, 0f, -1f, 0f, 255f,
+        0f, 0f, 0f, 1f, 0f,
+    ))
+    val desat = ColorMatrix().apply { setSaturation(0.25f) }
+    val tone = ColorMatrix(floatArrayOf(
+        0.80f, 0f, 0f, 0f, 2f,
+        0f, 0.86f, 0f, 0f, 6f,
+        0f, 0f, 0.98f, 0f, 14f,
+        0f, 0f, 0f, 1f, 0f,
+    ))
+    invert.postConcat(desat)
+    invert.postConcat(tone)
+    return ColorMatrixColorFilter(invert)
+}
+
+private fun MapView.applyStyle(dark: Boolean) {
+    overlayManager.tilesOverlay.setColorFilter(if (dark) darkFilter() else null)
+    overlayManager.tilesOverlay.loadingBackgroundColor = if (dark) android.graphics.Color.rgb(14, 17, 22) else android.graphics.Color.rgb(230, 230, 230)
+    overlayManager.tilesOverlay.loadingLineColor = android.graphics.Color.TRANSPARENT
+    invalidate()
+}
 
 /**
  * Mapa interativo dentro do painel (arrastar, pinça para zoom, seguir GPS).
@@ -73,13 +88,16 @@ fun MapPanel(
 
     val map = remember {
         MapView(context).apply {
-            setTileSource(if (dark) DARK else LIGHT)
+            setTileSource(OSM)
+            applyStyle(dark)
             setMultiTouchControls(true)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             isTilesScaledToDpi = true
             minZoomLevel = 3.0
             maxZoomLevel = 19.0
             controller.setZoom(settings.value.mapZoom)
+            // começa já na última posição conhecida (antes do primeiro fix do GPS)
+            AutoGlassApp.instance.weather.location.value?.let { controller.setCenter(GeoPoint(it.latitude, it.longitude)) }
             val loc = MyLocationNewOverlay(GpsMyLocationProvider(context), this).apply {
                 runCatching { enableMyLocation() }
                 enableFollowLocation()
@@ -117,7 +135,7 @@ fun MapPanel(
     Box(modifier) {
         AndroidView(
             factory = { map },
-            update = { it.setTileSource(if (dark) DARK else LIGHT) },
+            update = { it.applyStyle(dark) },
             modifier = Modifier.fillMaxSize(),
         )
         Column(
@@ -134,7 +152,7 @@ fun MapPanel(
             }
         }
         Text(
-            "© OpenStreetMap © CARTO",
+            "© OpenStreetMap",
             color = Glass.textFaint,
             fontSize = 9.sp,
             modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),

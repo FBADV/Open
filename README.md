@@ -10,25 +10,29 @@ preto e rodas aro 19**.
 
 | 9" 1024x600 | 10" 1280x720 | 15" vertical |
 |---|---|---|
-| ![](docs/tela_9pol_1024x600_estudio.png) | ![](docs/tela_10pol_1280x720_dunas.png) | ![](docs/tela_15pol_vertical_1080x1920_dunas.png) |
+| ![](docs/tela_9pol_1024x600_estudio.png) | ![](docs/tela_10pol_1280x720_dunas_dia.png) | ![](docs/tela_15pol_vertical_1080x1920_dunas.png) |
 
 > As imagens acima são geradas automaticamente no build (Paparazzi). Nelas o mapa
 > aparece simulado; no aparelho ele é o mapa real com GPS.
 
 ## Baixar e instalar
 
-1. Baixe o APK pronto: [`dist/AutoGlass-1.1.0.apk`](dist/AutoGlass-1.1.0.apk)
+1. Baixe o APK pronto: [`dist/AutoGlass-1.2.0.apk`](dist/AutoGlass-1.2.0.apk)
    (ou a versão mais nova na aba **Actions → Build APK → Artifacts**).
 2. Copie para um pendrive e abra pelo gerenciador de arquivos da central
    (permita "instalar apps de fontes desconhecidas"). Por cabo/Wi-Fi:
-   `adb install -r AutoGlass-1.1.0.apk`.
-3. Aperte o botão **Home** da central e escolha **AutoGlass → Sempre**.
-   Se não aparecer a pergunta: *Configurações do AutoGlass → Definir como tela inicial padrão*.
+   `adb install -r AutoGlass-1.2.0.apk`.
+3. Na primeira abertura o Android pergunta se o **AutoGlass deve ser o app de tela
+   inicial padrão** — confirme. A partir daí ele é a tela principal: aparece ao ligar
+   a central e ao tocar em Home. (Se não perguntar: *Configurações → Permissões e
+   sistema → Tela inicial padrão*. Algumas centrais FYT/SYU escolhem o launcher nas
+   *Configurações de fábrica*.)
 4. Na primeira abertura, conceda:
    - **Localização**: mapa, GPS e previsão do tempo;
    - **Acesso às mídias** (botão *Permitir* no cartão de música): mostra música,
      capa e progresso do Spotify, YouTube Music, Deezer, Amazon Music, rádio etc.;
-   - opcional, **Sobrepor a outros apps**: botão Home flutuante.
+   - **Sobrepor a outros apps**: permite abrir o AutoGlass sozinho quando a central
+     liga ou acorda (Android 10+) e o botão Home flutuante.
 
 Requisitos: Android 7.0 ou mais novo (FYT/SYU, MTCD/Microntek, TS, Topway e
 outras centrais "Android Auto Radio").
@@ -38,7 +42,7 @@ outras centrais "Android Auto Radio").
 | Área | Função |
 |---|---|
 | **Barra de status** | Previsão do tempo (cidade, condição, máx/mín) e estado da conexão. |
-| **Palco do veículo** | O Compass com reflexo no piso, sombra e luz de destaque, sobre o ambiente escolhido: **Estúdio, Rua, Dunas, Estrada ou Lama**. Relógio grande e data. |
+| **Palco do veículo** | O Compass com sombra de contato no piso e luz de destaque, sobre o ambiente escolhido: **Estúdio, Rua, Dunas, Estrada ou Lama**. Cada ambiente tem versão de **dia e de noite**, trocada automaticamente pelo nascer/pôr do sol; quando chove no local, aparece **chuva animada**; à noite o carro recebe uma luz mais fria. Relógio grande e data. |
 | **Painel ao vivo** | **Mapa** interativo com GPS (arrastar, pinça, centralizar), **YouTube** tocável dentro do painel ou um **Widget** de qualquer app (Google Maps, Spotify, rádio da central…). **Dois toques** abrem o app real em tela cheia (Waze/Google Maps, YouTube). Volte com o botão Home. |
 | **Cartão de música** | Mostra e controla o que estiver tocando (anterior, play/pause, próxima, progresso). Atalhos para **Rádio** e **Player da central** e para os apps de música instalados. |
 | **Dock** | Navegação, Música, Rádio, Telefone/Bluetooth e Vídeo (**toque longo** escolhe o app de cada botão), até **4 apps fixos** (ex.: Spotify, YouTube Music, Deezer, Prime Video) e acesso a todos os apps e às configurações. |
@@ -58,6 +62,7 @@ Em **Configurações**:
 - **Cor de destaque**: Azul gelo, Champagne, Vermelho ou Platina.
 - **Ambiente**: escolha o fundo padrão ou use uma foto sua para cada modo.
 - **Apps da central**: defina o app de navegação, música, rádio, player, vídeo e telefone.
+  O botão **Música** abre o **YouTube Music** (YouTube Premium) por padrão; sem ele, o YouTube.
   O app já detecta sozinho os pacotes mais comuns (Waze, Google Maps, Spotify,
   YouTube Music, Deezer, Amazon Music, rádios `com.syu.radio`, `com.microntek.radio`,
   `com.android.fmradio` etc.).
@@ -69,6 +74,9 @@ Em **Configurações**:
 
 O Android não deixa um app desenhar outro app dentro dele. Por isso o painel usa um mapa
 próprio (OpenStreetMap) e a versão web do YouTube, e o app real abre ao dar dois toques.
+O mapa usa o **OpenStreetMap**, gratuito e **sem chave de API** (precisa só de internet);
+o modo escuro é um filtro aplicado ao mapa.
+
 Se a sua central tiver **janelas de formato livre**, ative em *Opções do desenvolvedor*:
 
 1. **Forçar atividades a serem redimensionáveis**;
@@ -113,9 +121,9 @@ tools/                     scripts que geraram a foto branca e os ambientes
 - Foto do veículo: "22 Jeep Compass Limited", por HJUdall, Wikimedia Commons,
   **CC0 (domínio público)**. Recortada e repintada digitalmente em branco
   (original vermelho, mesma versão Limited com teto preto e rodas aro 19),
-  com adesivos do para-brisa removidos, vidros escurecidos, reflexos suavizados e placa Mercosul sem caracteres.
+  com adesivos do para-brisa removidos, vidros levemente escurecidos, bordas do recorte refinadas e placa Mercosul sem caracteres. Scripts: `tools/recolor_vehicle.py` e `tools/finalize_vehicle.py`.
   Script: `tools/recolor_vehicle.py`.
 - Ambientes Estúdio, Rua, Dunas, Estrada e Lama: gerados por `tools/generate_scenes.py`.
-- Mapas © OpenStreetMap contributors © CARTO. Previsão: Open-Meteo.com (CC BY 4.0).
+- Mapas © OpenStreetMap contributors. Previsão: Open-Meteo.com (CC BY 4.0).
 - Jeep e Compass são marcas de seus respectivos titulares. Este é um projeto pessoal,
   sem vínculo com a fabricante.

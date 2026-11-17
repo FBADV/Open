@@ -15,6 +15,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fbadv.autoglass.launch.AppLauncher
 import com.fbadv.autoglass.overlay.HomeBubbleService
 import com.fbadv.autoglass.ui.LauncherRoot
 import com.fbadv.autoglass.ui.Screen
@@ -41,7 +42,8 @@ class MainActivity : ComponentActivity() {
         if (!app.weather.hasLocationPermission()) {
             locationRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
-        if (app.settings.value.homeBubble) HomeBubbleService.start(this)
+        HomeBubbleService.refresh(this)
+        askToBeDefaultHome()
 
         setContent {
             AutoGlassTheme {
@@ -50,6 +52,19 @@ class MainActivity : ComponentActivity() {
                 LauncherRoot(screen)
             }
         }
+    }
+
+    private val homeRole = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+
+    /**
+     * Na primeira abertura, pede ao Android para o AutoGlass ser a tela inicial
+     * padrão: assim ele aparece sozinho ao ligar a central e ao tocar em Home.
+     */
+    private fun askToBeDefaultHome() {
+        val prefs = getSharedPreferences("autoglass_state", MODE_PRIVATE)
+        if (AppLauncher.isDefaultHome(this) || prefs.getBoolean("askedHome", false)) return
+        prefs.edit().putBoolean("askedHome", true).apply()
+        runCatching { homeRole.launch(AppLauncher.defaultHomeRequest(this)) }
     }
 
     private fun applyImmersive(enabled: Boolean) {

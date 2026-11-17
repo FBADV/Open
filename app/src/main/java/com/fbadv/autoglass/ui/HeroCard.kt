@@ -41,17 +41,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -96,6 +92,7 @@ fun VehicleStage(
     vehicleName: String,
     vehicleTrim: String,
     clock24h: Boolean,
+    night: Boolean,
     onSceneChange: (SceneMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -111,12 +108,12 @@ fun VehicleStage(
         // luz de destaque atrás do carro
         Canvas(Modifier.fillMaxSize()) {
             val cx = size.width * 0.5f + carShiftX.toPx()
-            val floorY = size.height - selectorSpace.toPx() - carH.toPx() * 0.06f
+            val floorY = size.height - selectorSpace.toPx()
             val r = carW.toPx() * 0.75f
             val c = Offset(cx, floorY - carH.toPx() * 0.40f)
             drawCircle(
                 Brush.radialGradient(
-                    0f to Glass.accent.copy(alpha = 0.14f), 0.55f to Glass.accent.copy(alpha = 0.04f), 1f to Color.Transparent,
+                    0f to Glass.accent.copy(alpha = if (night) 0.12f else 0.05f), 0.55f to Glass.accent.copy(alpha = if (night) 0.035f else 0.012f), 1f to Color.Transparent,
                     center = c, radius = r,
                 ),
                 radius = r, center = c,
@@ -137,52 +134,42 @@ fun VehicleStage(
             transitionSpec = { (slideInHorizontally(tween(800)) { it / 4 } + fadeIn(tween(600))) togetherWith fadeOut(tween(200)) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(x = carShiftX, y = carH * 0.30f - selectorSpace)
+                .offset(x = carShiftX, y = -selectorSpace + carH * 0.02f)
                 .width(carW)
-                .height(carH * 1.30f),
+                .height(carH),
             label = "vehicle",
         ) { v ->
             if (v != null) Box(Modifier.fillMaxSize()) {
-                // reflexo no piso
-                Box(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(carH * 0.30f)
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.30f), 1f to Color.Transparent),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        },
-                ) {
-                    Image(
-                        v, null,
-                        Modifier.fillMaxWidth().height(carH).graphicsLayer { scaleY = -1f; translationY = -carH.toPx() * 0.0f },
-                        contentScale = ContentScale.FillBounds,
-                        alignment = Alignment.TopCenter,
-                    )
-                }
-                // sombra de contato
+                // sombra de contato seguindo a perspectiva da foto (¾ de frente):
+                // faixa diagonal sob a carroceria + sombra concentrada em cada pneu
                 Canvas(Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter)) {
-                    val h = size.height * 0.12f
-                    drawOval(
-                        Brush.radialGradient(
-                            listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent),
-                            center = Offset(size.width * 0.5f, size.height * 0.95f),
-                            radius = size.width * 0.52f,
-                        ),
-                        topLeft = Offset(size.width * 0.0f, size.height * 0.95f - h / 2),
-                        size = Size(size.width, h),
-                    )
+                    val w = size.width; val h = size.height
+                    val a0 = Offset(w * 0.10f, h * 0.885f); val a1 = Offset(w * 0.93f, h * 0.715f)
+                    val steps = 14
+                    for (i in 0..steps) {
+                        val t = i / steps.toFloat()
+                        val c = Offset(a0.x + (a1.x - a0.x) * t, a0.y + (a1.y - a0.y) * t)
+                        val r = w * (0.13f - 0.05f * t)
+                        drawOval(
+                            Brush.radialGradient(listOf(Color.Black.copy(alpha = if (night) 0.30f else 0.22f), Color.Transparent), center = c, radius = r),
+                            topLeft = Offset(c.x - r, c.y - r * 0.35f), size = Size(r * 2, r * 0.7f),
+                        )
+                    }
+                    for ((c, r) in listOf(Offset(w * 0.52f, h * 0.965f) to w * 0.085f, Offset(w * 0.915f, h * 0.705f) to w * 0.055f)) {
+                        drawOval(
+                            Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent), center = c, radius = r),
+                            topLeft = Offset(c.x - r, c.y - r * 0.25f), size = Size(r * 2, r * 0.5f),
+                        )
+                    }
                 }
                 Image(
                     v, vehicleName,
                     Modifier.fillMaxWidth().height(carH).align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit,
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(0.97f, 0.98f, 1f, 1f) }),
+                    // o carro recebe a luz do ambiente: mais frio/escuro à noite
+                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply {
+                        if (night) setToScale(0.80f, 0.84f, 0.93f, 1f) else setToScale(1f, 1f, 1f, 1f)
+                    }),
                 )
             }
         }
@@ -192,13 +179,13 @@ fun VehicleStage(
         Column(Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 4.dp)) {
             Text(
                 SimpleDateFormat(if (clock24h) "HH:mm" else "h:mm", Locale("pt", "BR")).format(Date(now)),
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = if (compact) 64.sp else 92.sp),
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = if (compact) 64.sp else 92.sp, shadow = Glass.textShadow),
                 color = Glass.text,
             )
             Text(
                 SimpleDateFormat("EEEE · d 'de' MMMM", Locale("pt", "BR")).format(Date(now)).uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = Glass.textDim,
+                style = MaterialTheme.typography.labelMedium.copy(shadow = Glass.textShadow),
+                color = Glass.text.copy(alpha = 0.8f),
             )
             if (wideStage) {
                 Spacer(Modifier.height(18.dp))
@@ -229,12 +216,13 @@ private fun VehicleName(vehicleName: String, vehicleTrim: String, compact: Boole
                 fontSize = if (compact) 18.sp else 24.sp,
                 fontWeight = FontWeight.Light,
                 letterSpacing = 9.sp,
+                style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow),
             )
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(18.dp).height(1.dp).background(Glass.accent))
                 Spacer(Modifier.width(8.dp))
-                Text(vehicleTrim.uppercase(), color = Glass.textDim, fontSize = 11.sp, letterSpacing = 4.sp)
+                Text(vehicleTrim.uppercase(), color = Glass.text.copy(alpha = 0.75f), fontSize = 11.sp, letterSpacing = 4.sp, style = androidx.compose.ui.text.TextStyle(shadow = Glass.textShadow))
             }
         }
 }

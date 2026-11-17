@@ -93,7 +93,7 @@ fun StatusBar(weather: Weather?, network: NetworkState, modifier: Modifier = Mod
         Text(
             weather?.let { "${it.city.uppercase()}  ·  ${it.description.uppercase()}  ·  ${it.max.roundToInt()}° / ${it.min.roundToInt()}°" }
                 ?: "BUSCANDO LOCALIZAÇÃO",
-            color = Glass.textDim, style = MaterialTheme.typography.labelMedium,
+            color = Glass.text.copy(alpha = 0.75f), style = MaterialTheme.typography.labelMedium.copy(shadow = Glass.textShadow),
             maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )

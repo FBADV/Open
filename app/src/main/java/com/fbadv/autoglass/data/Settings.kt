@@ -15,6 +15,13 @@ enum class SceneMode(val label: String, val key: String) {
     LAMA("Lama", "lama"),
 }
 
+/** Iluminação do ambiente: segue o dia/noite real ou fica fixa. */
+enum class LightingMode(val label: String) {
+    AUTO("Automática"),
+    DIA("Sempre dia"),
+    NOITE("Sempre noite"),
+}
+
 /** Cor de destaque da interface (o restante é grafite/preto). */
 enum class AccentTheme(val label: String, val argb: Long) {
     GELO("Azul gelo", 0xFF8ED1FF),
@@ -43,6 +50,9 @@ enum class AppRole(val label: String, val key: String) {
 data class Settings(
     val scene: SceneMode = SceneMode.ESTUDIO,
     val accent: AccentTheme = AccentTheme.GELO,
+    val lighting: LightingMode = LightingMode.AUTO,
+    val rainEffect: Boolean = true,
+    val autoStart: Boolean = true,
     val favorites: List<String> = emptyList(),
     val roles: Map<AppRole, String> = emptyMap(),
     val livePanel: LivePanelMode = LivePanelMode.MAPA,
@@ -96,6 +106,9 @@ class SettingsStore(context: Context) {
         val d = Settings()
         return Settings(
             scene = SceneMode.entries.firstOrNull { it.key == prefs.getString("scene", null) } ?: d.scene,
+            lighting = LightingMode.entries.firstOrNull { it.name == prefs.getString("lighting", null) } ?: d.lighting,
+            rainEffect = prefs.getBoolean("rainEffect", true),
+            autoStart = prefs.getBoolean("autoStart", true),
             accent = AccentTheme.entries.firstOrNull { it.name == prefs.getString("accent", null) } ?: d.accent,
             favorites = prefs.getString("favorites", "")!!.split('|').let { l ->
                 List(MAX_FAVORITES) { l.getOrNull(it).orEmpty() }
@@ -125,6 +138,9 @@ class SettingsStore(context: Context) {
         prefs.edit().apply {
             putString("scene", s.scene.key)
             putString("accent", s.accent.name)
+            putString("lighting", s.lighting.name)
+            putBoolean("rainEffect", s.rainEffect)
+            putBoolean("autoStart", s.autoStart)
             putString("favorites", s.favorites.joinToString("|"))
             AppRole.entries.forEach { r ->
                 val v = s.roles[r]

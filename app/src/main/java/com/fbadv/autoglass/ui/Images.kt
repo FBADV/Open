@@ -13,16 +13,16 @@ import com.fbadv.autoglass.data.SceneMode
 import java.io.File
 
 object Images {
-    fun sceneRes(mode: SceneMode): Int = when (mode) {
-        SceneMode.ESTUDIO -> R.drawable.scene_estudio
-        SceneMode.RUA -> R.drawable.scene_rua
-        SceneMode.DUNAS -> R.drawable.scene_dunas
-        SceneMode.ESTRADA -> R.drawable.scene_estrada
-        SceneMode.LAMA -> R.drawable.scene_lama
+    fun sceneRes(mode: SceneMode, day: Boolean = false): Int = when (mode) {
+        SceneMode.ESTUDIO -> if (day) R.drawable.scene_estudio_dia else R.drawable.scene_estudio
+        SceneMode.RUA -> if (day) R.drawable.scene_rua_dia else R.drawable.scene_rua
+        SceneMode.DUNAS -> if (day) R.drawable.scene_dunas_dia else R.drawable.scene_dunas
+        SceneMode.ESTRADA -> if (day) R.drawable.scene_estrada_dia else R.drawable.scene_estrada
+        SceneMode.LAMA -> if (day) R.drawable.scene_lama_dia else R.drawable.scene_lama
     }
 
-    fun loadScene(context: Context, mode: SceneMode, customPath: String?): Bitmap? =
-        customPath?.let { decodeFile(it, 1920) } ?: decodeRes(context, sceneRes(mode), 1920)
+    fun loadScene(context: Context, mode: SceneMode, customPath: String?, day: Boolean = false): Bitmap? =
+        customPath?.let { decodeFile(it, 1920) } ?: decodeRes(context, sceneRes(mode, day), 1920)
 
     fun loadVehicle(context: Context, customPath: String?): Bitmap? =
         customPath?.let { decodeFile(it, 1400) } ?: decodeRes(context, R.drawable.vehicle_compass_limited, 1400)
